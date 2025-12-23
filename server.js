@@ -53,7 +53,8 @@ app.get('/', (req, res) => {
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*" } // Permitir conexiones desde cualquier lugar (App Android)
+    cors: { origin: "*" }, // Permitir conexiones desde cualquier lugar (App Android)
+    allowEIO3: true
 });
 
 io.on('connection', (socket) => {
@@ -80,4 +81,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);
+
 });
