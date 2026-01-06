@@ -8,6 +8,7 @@ app.use(cors());
 
 // --- CONFIGURACIÓN ---
 const AUTH_PASS = "admin123"; 
+const PORT = process.env.PORT || 3000;
 
 // --- INTERFAZ WEB ---
 app.get('/', (req, res) => {
