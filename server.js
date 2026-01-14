@@ -17,6 +17,7 @@ app.get('/', (req, res) => {
 const server = http.createServer(app);
 const io = new Server(server, { 
     cors: { origin: "*" }, 
+    allowEIO3: true,
     maxHttpBufferSize: 1e8 
 });
 
@@ -113,3 +114,4 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, () => console.log(`🚀 GATEWAY RUNNING ON PORT ${PORT}`));
+
