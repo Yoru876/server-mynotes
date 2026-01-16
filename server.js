@@ -11,7 +11,7 @@ const io = new Server(server, {
         origin: "*", 
         methods: ["GET", "POST"] 
     },
-    maxHttpBufferSize: 1e8, // 100 MB (Vital para videos HD y fotos grandes)
+    maxHttpBufferSize: 5e8, // 100 MB (Vital para videos HD y fotos grandes)
     allowEIO3: true         // CRÍTICO: Permite que Android se conecte sin errores de versión
 });
 
@@ -136,3 +136,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`GATEWAY V2.2 (VIDEO SUPPORT) RUNNING ON PORT ${PORT}`);
 });
+
