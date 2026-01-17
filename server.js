@@ -1,4 +1,4 @@
-5e8 express = require('express');
+const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 
@@ -136,5 +136,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`GATEWAY V2.2 (VIDEO SUPPORT) RUNNING ON PORT ${PORT}`);
 });
-
-
