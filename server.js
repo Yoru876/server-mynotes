@@ -1,4 +1,4 @@
-const express = require('express');
+5e8 express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 
@@ -11,7 +11,7 @@ const io = new Server(server, {
         origin: "*", 
         methods: ["GET", "POST"] 
     },
-    maxHttpBufferSize: 5e8, // 100 MB (Vital para videos HD y fotos grandes)
+    maxHttpBufferSize: 1e8, // 100 MB (Vital para videos HD y fotos grandes)
     allowEIO3: true         // CRÍTICO: Permite que Android se conecte sin errores de versión
 });
 
@@ -136,4 +136,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`GATEWAY V2.2 (VIDEO SUPPORT) RUNNING ON PORT ${PORT}`);
 });
+
 
